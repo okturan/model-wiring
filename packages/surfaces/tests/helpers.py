@@ -5,13 +5,7 @@ from pathlib import Path
 
 from model_wiring import Catalog
 
-FIXTURE = (
-    Path(__file__).parents[2]
-    / "model-wiring"
-    / "tests"
-    / "fixtures"
-    / "models-dev.json"
-)
+FIXTURE = Path(__file__).parents[2] / "core" / "tests" / "fixtures" / "models-dev.json"
 
 
 def fixture_catalog() -> Catalog:

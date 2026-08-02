@@ -50,9 +50,9 @@ from model_wiring_surfaces import SelectionController, render_screen
 controller = SelectionController(Catalog.from_cache_or_sync())
 print(render_screen(controller.view(), color=False))
 
-controller.search("luna")          # provider match counts; no flat model dump
-controller.activate_provider()      # enter the highlighted provider
-controller.choose()                 # choose its highlighted model
+controller.search("luna")  # provider match counts; no flat model dump
+controller.activate_provider()  # enter the highlighted provider
+controller.choose()  # choose its highlighted model
 ```
 
 Applications with a narrower executor can pass `route_support(model)` and

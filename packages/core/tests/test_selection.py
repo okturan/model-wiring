@@ -4,7 +4,6 @@ import json
 import unittest
 
 from helpers import fixture_catalog
-
 from model_wiring import CredentialProfile, SelectionIntent, Selector
 from model_wiring.errors import (
     AmbiguousSelection,

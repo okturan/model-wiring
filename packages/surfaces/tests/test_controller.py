@@ -4,7 +4,6 @@ import unittest
 
 from helpers import fixture_catalog
 from model_wiring import CredentialProfile
-
 from model_wiring_surfaces import SelectionController
 
 

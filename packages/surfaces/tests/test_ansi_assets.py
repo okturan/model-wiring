@@ -9,7 +9,6 @@ import unittest
 from pathlib import Path
 
 from helpers import fixture_catalog
-
 from model_wiring_surfaces import (
     SelectionController,
     copy_web_assets,

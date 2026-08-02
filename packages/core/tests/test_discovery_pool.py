@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 
 from helpers import fixture_catalog, fixture_raw
-
 from model_wiring import (
     Catalog,
     CredentialPool,

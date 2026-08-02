@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 
 from helpers import fixture_catalog
-
 from model_wiring import CredentialProfile, ProfileRegistry
 from model_wiring.api import ProviderService
 
