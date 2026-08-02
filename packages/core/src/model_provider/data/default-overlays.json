@@ -1,0 +1,74 @@
+{
+  "providers": {
+    "openai-codex": {
+      "name": "OpenAI Codex",
+      "models_from": "openai",
+      "include_models": [
+        "gpt-5.6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra"
+      ],
+      "adapter": "openai-codex-sdk",
+      "api_url": null,
+      "env": [],
+      "auth_methods": [
+        {
+          "kind": "delegated",
+          "billing_kinds": [
+            "subscription",
+            "api"
+          ],
+          "label": "Codex or ChatGPT login",
+          "metadata": {
+            "credential_owner": "codex-client",
+            "token_export": false
+          }
+        }
+      ],
+      "metadata": {
+        "availability": "requires-runtime-verification",
+        "tiers": [
+          "standard",
+          "fast"
+        ],
+        "tier_options": {
+          "standard": {},
+          "fast": {
+            "service_tier": "fast"
+          }
+        }
+      },
+      "model_patches": {
+        "gpt-5.6-luna": {
+          "metadata": {
+            "tiers": [
+              "standard",
+              "fast"
+            ]
+          }
+        },
+        "gpt-5.6-sol": {
+          "metadata": {
+            "tiers": [
+              "standard",
+              "fast"
+            ]
+          }
+        },
+        "gpt-5.6-terra": {
+          "metadata": {
+            "tiers": [
+              "standard",
+              "fast"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "aliases": {
+    "codex/luna": "openai-codex/gpt-5.6-luna",
+    "openai/luna": "openai/gpt-5.6-luna"
+  },
+  "roles": {}
+}
