@@ -50,8 +50,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     controller.search(args.query)
     if args.command == "render":
         if args.model:
+            model = catalog.model(args.model)
+            controller.search("", provider=model.provider_id)
             for index, candidate in enumerate(controller.view().candidates):
-                if candidate.id == args.model:
+                if candidate.id == model.qualified_id:
                     controller.choose(index)
                     break
         print(
