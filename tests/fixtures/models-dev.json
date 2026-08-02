@@ -1,0 +1,64 @@
+{
+  "openai": {
+    "id": "openai",
+    "name": "OpenAI",
+    "npm": "@ai-sdk/openai",
+    "env": ["OPENAI_API_KEY"],
+    "doc": "https://example.test/openai",
+    "models": {
+      "gpt-5.6-luna": {
+        "id": "gpt-5.6-luna",
+        "name": "GPT-5.6 Luna",
+        "family": "gpt-luna",
+        "attachment": true,
+        "reasoning": true,
+        "reasoning_options": [{"type": "effort", "values": ["low", "high"]}],
+        "tool_call": true,
+        "structured_output": true,
+        "modalities": {"input": ["text", "image"], "output": ["text"]},
+        "limit": {"context": 1000000, "output": 128000},
+        "experimental": {
+          "modes": {
+            "fast": {
+              "provider": {"body": {"service_tier": "priority"}},
+              "cost": {"input": 0.4, "output": 2.4}
+            }
+          }
+        },
+        "cost": {"input": 0.2, "output": 1.2}
+      }
+    }
+  },
+  "acme": {
+    "id": "acme",
+    "name": "Acme Models",
+    "npm": "@ai-sdk/openai-compatible",
+    "env": ["ACME_KEY"],
+    "models": {
+      "gpt-5.6-luna": {
+        "id": "gpt-5.6-luna",
+        "name": "Acme Luna Mirror",
+        "reasoning": false,
+        "tool_call": false,
+        "modalities": {"input": ["text"], "output": ["text"]},
+        "limit": {"context": 32000}
+      }
+    }
+  },
+  "local": {
+    "id": "local",
+    "name": "Local Runtime",
+    "npm": "@ai-sdk/openai-compatible",
+    "env": [],
+    "models": {
+      "small": {
+        "id": "small",
+        "name": "Small Local",
+        "reasoning": false,
+        "tool_call": true,
+        "modalities": {"input": ["text"], "output": ["text"]},
+        "limit": {"context": 8192}
+      }
+    }
+  }
+}
