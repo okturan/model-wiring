@@ -8,7 +8,24 @@ version = "0.1.0"
 description = "Provider, model, credential, and billing-route selection for AI applications"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Okan Erturan" }]
+keywords = ["llm", "provider", "catalog", "oauth", "credentials", "selection"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/okturan/model-wiring"
+Repository = "https://github.com/okturan/model-wiring"
+Issues = "https://github.com/okturan/model-wiring/issues"
 
 [project.optional-dependencies]
 keyring = ["keyring>=25,<27"]

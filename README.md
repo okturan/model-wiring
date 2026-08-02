@@ -33,4 +33,9 @@ uv sync
 Pre-release (0.1.0). The first integration is Atlas, a local session
 console that uses the catalogue, selection controller, and terminal picker.
 Provider onboarding depth (per-provider auth flow execution) is the current
-focus.
+focus; see [`docs/specs/`](docs/specs/README.md).
+
+## License
+
+Apache-2.0; see [LICENSE](LICENSE). Catalogue data comes from the MIT-licensed
+Models.dev project; see [THIRD_PARTY.md](packages/core/THIRD_PARTY.md).

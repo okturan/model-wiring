@@ -17,3 +17,17 @@ jobs:
       - run: python -m unittest discover -s packages/surfaces/tests -v
       - run: python -m compileall -q packages/core/src packages/core/tests packages/surfaces/src packages/surfaces/tests
       - run: node --check packages/surfaces/src/model_wiring_surfaces/web/model-wiring-picker.js
+
+  windows:
+    # The ANSI picker is POSIX-only, but importing the package, using the web
+    # primitives, and the whole core must work on native Windows.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e packages/core -e packages/surfaces
+      - run: python -m unittest discover -s packages/core/tests -v
+      - run: python -c "import model_wiring_surfaces; print(model_wiring_surfaces.SelectionController.__name__)"
+      - run: python -c "import tempfile, pathlib; from model_wiring_surfaces import copy_web_assets; d=tempfile.mkdtemp(); print([p.name for p in copy_web_assets(pathlib.Path(d))])"

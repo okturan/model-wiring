@@ -9,7 +9,7 @@ harness: it does not run prompts, tools, loops, or sessions.
           |
           v
  +---------------------------+
- | model-wiring        |
+ | model-wiring              |
  | catalog + auth + selector |
  +---------------------------+
        | credential-free SelectionPlan
@@ -21,8 +21,8 @@ harness: it does not run prompts, tools, loops, or sessions.
 ```
 
 The same core is usable as a Python library, a Unix JSON CLI, or a loopback JSON
-service. [`model-wiring-surfaces`](../model-wiring-surfaces) is its sibling
-package for CLI, ANSI TUI, and browser selection controls.
+service. [`model-wiring-surfaces`](../surfaces) is its sibling package for CLI,
+ANSI TUI, and browser selection controls.
 
 ## What it owns
 
@@ -134,7 +134,7 @@ python3 -m compileall -q src tests
 
 See [the contract](docs/SPEC.md) and [research adoption notes](docs/RESEARCH-ADOPTION.md).
 
-## License status
+## License
 
-No license has been selected for this project yet. Models.dev is an external
-MIT-licensed data source; see [THIRD_PARTY.md](THIRD_PARTY.md).
+Apache-2.0; see [LICENSE](LICENSE). Models.dev is an external MIT-licensed data
+source; see [THIRD_PARTY.md](THIRD_PARTY.md).

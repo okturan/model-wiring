@@ -1,7 +1,7 @@
 # Model Wiring Surfaces
 
 Reusable CLI, ANSI TUI, and browser controls for
-[`model-wiring`](../model-wiring). The package does not execute a
+[`model-wiring`](../core). The package does not execute a
 model; it helps a human form the same secret-free `SelectionIntent` any app can
 form programmatically.
 
@@ -29,7 +29,7 @@ Surfaces: composable CLI · full-screen ANSI TUI · Web Component
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -e ../model-wiring -e .
+.venv/bin/pip install -e ../core -e .
 
 # Interactive ANSI selector.
 .venv/bin/model-wiring-ui pick
@@ -106,4 +106,6 @@ uv sync --locked
 node --check src/model_wiring_surfaces/web/model-wiring-picker.js
 ```
 
-No license has been selected for this project yet.
+## License
+
+Apache-2.0; see [LICENSE](LICENSE).

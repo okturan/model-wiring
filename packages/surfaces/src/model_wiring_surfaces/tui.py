@@ -7,9 +7,14 @@ import os
 import select
 import shutil
 import sys
-import termios
-import tty
 from typing import TextIO
+
+try:  # Native Windows has neither module; only the ANSI picker needs them.
+    import termios
+    import tty
+except ImportError:  # pragma: no cover - exercised by the portability suite
+    termios = None  # type: ignore[assignment]
+    tty = None  # type: ignore[assignment]
 
 from model_wiring import SelectionPlan
 from model_wiring.errors import ModelProviderError
@@ -22,6 +27,16 @@ EXIT_ALT = "\x1b[?25h\x1b[?1049l"
 CLEAR = "\x1b[H\x1b[2J"
 
 
+def require_posix_terminal() -> None:
+    """Fail with a usable explanation instead of an AttributeError."""
+
+    if termios is None or tty is None:
+        raise RuntimeError(
+            "the ANSI picker needs the POSIX termios and tty modules, which this "
+            "platform does not provide; use the web picker or the JSON CLI instead"
+        )
+
+
 def enable_character_input(descriptor: int) -> None:
     """Read keys immediately without disabling terminal output processing.
 
@@ -31,6 +46,7 @@ def enable_character_input(descriptor: int) -> None:
     preserving normal newline rendering.
     """
 
+    require_posix_terminal()
     tty.setcbreak(descriptor)
 
 
@@ -41,6 +57,7 @@ def run_tui(
     output_stream: TextIO = sys.stdout,
     color: bool = True,
 ) -> SelectionPlan | None:
+    require_posix_terminal()
     if not input_stream.isatty() or not output_stream.isatty():
         raise RuntimeError("interactive picker requires a TTY")
     descriptor = input_stream.fileno()

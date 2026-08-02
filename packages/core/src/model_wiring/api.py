@@ -105,7 +105,7 @@ def make_handler(
     service: ProviderService, *, allowed_origin: str | None = None
 ) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
-        server_version = "ModelProviderKit/0.1"
+        server_version = "ModelWiring/0.1"
 
         def do_GET(self) -> None:
             parsed = urlparse(self.path)
