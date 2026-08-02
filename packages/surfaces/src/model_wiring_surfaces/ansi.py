@@ -355,7 +355,12 @@ def _preview_rows(view: SelectionView, width: int) -> list[str]:
     preview = view.preview
     if preview is None:
         return []
-    availability = "ready in this app" if preview.route_supported else "catalogue only"
+    if not preview.route_supported:
+        availability = "catalogue only"
+    elif preview.usable_now:
+        availability = "ready in this app"
+    else:
+        availability = "needs access"
     result = [
         "HIGHLIGHT",
         _truncate(preview.name, width),
@@ -364,6 +369,14 @@ def _preview_rows(view: SelectionView, width: int) -> list[str]:
         f"context       {_number(preview.context_limit)}",
         f"availability  {availability}",
     ]
+    if preview.route_supported and not preview.usable_now:
+        result.append(
+            _truncate(
+                "needs         "
+                + (", ".join(preview.required_variables) or "a stored credential"),
+                width,
+            )
+        )
     modes: list[str] = []
     if preview.variants:
         modes.append("variant " + "/".join(preview.variants))

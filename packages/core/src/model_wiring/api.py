@@ -9,8 +9,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from .access import provider_access
 from .catalog import Catalog
-from .contracts import CredentialProfile, SelectionIntent
+from .contracts import CredentialProfile, ProviderSpec, SelectionIntent
 from .errors import AmbiguousSelection, ModelProviderError
 from .popularity import provider_popularity_key
 from .profiles import ProfileRegistry
@@ -38,7 +39,7 @@ class ProviderService:
         if path == "/v1/providers":
             return 200, {
                 "items": [
-                    provider.to_dict(include_models=False)
+                    self._provider_payload(provider)
                     for provider in sorted(
                         self.catalog.snapshot.providers.values(),
                         key=provider_popularity_key,
@@ -80,6 +81,28 @@ class ProviderService:
             )
             return 200, {"items": [profile.to_dict() for profile in items]}
         return 404, {"error": {"type": "not_found", "message": "route not found"}}
+
+    def _stored_profiles(self) -> tuple[CredentialProfile, ...]:
+        if isinstance(self.profiles, ProfileRegistry):
+            return tuple(self.profiles.list())
+        return tuple(self.profiles or ())
+
+    def _provider_payload(self, provider: ProviderSpec) -> dict[str, Any]:
+        """Serve catalogue facts and the non-secret answer to "how do I connect?"."""
+
+        access = provider_access(
+            provider,
+            tuple(
+                profile
+                for profile in self._stored_profiles()
+                if profile.provider_id == provider.id and profile.enabled
+            ),
+        )
+        payload = provider.to_dict(include_models=False)
+        payload["access_routes"] = [route.to_dict() for route in access.routes]
+        payload["required_variables"] = list(access.required_variables)
+        payload["credential_state"] = access.credential_state
+        return payload
 
     def post(self, path: str, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         if path == "/v1/select":

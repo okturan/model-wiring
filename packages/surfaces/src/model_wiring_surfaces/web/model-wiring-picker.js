@@ -163,20 +163,48 @@ class ModelWiringPicker extends HTMLElement {
     if (this.supportedProviders && !this.supportedProviders.has(provider.id)) {
       return { state: "catalog", label: "Catalogue only" };
     }
-    const authRequired = (provider.auth_methods || []).some(
-      (method) => method.kind !== "anonymous",
-    );
+    const routes = this.accessRoutes(provider);
+    if (!routes.length) {
+      return { state: "catalog", label: "No known access route" };
+    }
     const profiles = this.state.profiles.filter(
       (profile) => profile.provider_id === provider.id && profile.enabled,
     );
-    if (authRequired && !profiles.length) {
-      const method = provider.auth_methods.find((item) => item.kind !== "anonymous");
+    const credentialState = this.credentialState(provider, profiles);
+    if (credentialState === "connectable") {
       return {
         state: "connect",
-        label: `Connect · ${this.authLabel(method?.kind)}`,
+        label: `Connect · ${this.authLabel(routes[0].kind)}`,
+        requires: this.requiredVariables(provider),
       };
     }
     return { state: "ready", label: "Ready now" };
+  }
+
+  accessRoutes(provider) {
+    if (Array.isArray(provider.access_routes)) return provider.access_routes;
+    // Older payloads only describe auth kinds; treat each as a bare route.
+    return (provider.auth_methods || []).map((method) => ({
+      kind: method.kind,
+      billing_kind: (method.billing_kinds || [])[0] || "unknown",
+      env: method.env || [],
+      needs_credential: method.kind !== "anonymous",
+    }));
+  }
+
+  requiredVariables(provider) {
+    if (Array.isArray(provider.required_variables)) return provider.required_variables;
+    return [...new Set(this.accessRoutes(provider).flatMap((route) => route.env || []))];
+  }
+
+  credentialState(provider, profiles) {
+    if (provider.credential_state) return provider.credential_state;
+    const routes = this.accessRoutes(provider);
+    if (!routes.length) return "unavailable";
+    if (profiles.length) return "configured";
+    return routes.every((route) => !route.needs_credential)
+      ? "configured"
+      : "connectable";
   }
 
   async activateProvider(provider, { focusModels = true } = {}) {
@@ -242,8 +270,8 @@ class ModelWiringPicker extends HTMLElement {
     this.fillSelect("[data-variant]", Object.keys(model.variants || {}), "Provider default");
     this.fillSelect("[data-effort]", model.reasoning_options || [], "Provider default");
     const provider = hit.provider;
-    this.state.authRequired = (provider.auth_methods || []).some(
-      (method) => method.kind !== "anonymous",
+    this.state.authRequired = this.accessRoutes(provider).some(
+      (route) => route.needs_credential ?? route.kind !== "anonymous",
     );
     const tiers = [
       ...new Set([
@@ -388,7 +416,10 @@ class ModelWiringPicker extends HTMLElement {
       const count = document.createElement("span");
       count.textContent = `${provider.model_count} models`;
       const state = document.createElement("small");
-      state.textContent = provider.surfaceState.label;
+      const requires = provider.surfaceState.requires || [];
+      state.textContent = requires.length
+        ? `${provider.surfaceState.label} · needs ${requires.join(", ")}`
+        : provider.surfaceState.label;
       button.append(name, count, state);
       button.addEventListener("click", () => this.activateProvider(provider));
       collection.append(button);
@@ -480,11 +511,17 @@ class ModelWiringPicker extends HTMLElement {
     const ready = supported && (!this.state.authRequired || Boolean(profile));
     this.shadowRoot.querySelector("[data-resolve]").disabled = !ready;
     this.updateStages(ready);
+    const requires = this.state.activeProvider
+      ? this.requiredVariables(this.state.activeProvider)
+      : [];
+    const connectHint = requires.length
+      ? `Connect this provider with ${requires.join(", ")} or a stored credential`
+      : "Choose an authenticated access route for this provider";
     this.setStatus(
       ready
         ? "Route ready; review and confirm"
         : supported
-          ? "Choose an authenticated access route for this provider"
+          ? connectHint
           : "Catalogue inspection only; this application cannot execute the provider",
     );
   }

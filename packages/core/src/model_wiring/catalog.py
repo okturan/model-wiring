@@ -174,16 +174,10 @@ class Catalog:
             env = tuple(str(item) for item in provider_raw.get("env", ()) if item)
             auth_methods: tuple[AuthMethod, ...] = ()
             if env:
-                methods = [
-                    AuthMethod(
-                        kind="credential_bundle", billing_kinds=("api",), env=env
-                    )
-                ]
-                if len(env) == 1:
-                    methods.append(
-                        AuthMethod(kind="api_key", billing_kinds=("api",), env=env)
-                    )
-                auth_methods = tuple(methods)
+                # One variable is an API key; several are a bundle that only
+                # works when every value is present.
+                kind = "api_key" if len(env) == 1 else "credential_bundle"
+                auth_methods = (AuthMethod(kind=kind, billing_kinds=("api",), env=env),)
             known = {"id", "name", "npm", "env", "api", "doc", "models"}
             metadata = {
                 key: value for key, value in provider_raw.items() if key not in known

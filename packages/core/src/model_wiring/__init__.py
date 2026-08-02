@@ -1,5 +1,11 @@
 """Provider/model/auth selection without an agent runtime."""
 
+from .access import (
+    AccessRoute,
+    ProviderAccess,
+    provider_access,
+    provider_access_routes,
+)
 from .auth import (
     AuthBroker,
     CredentialLease,
@@ -41,6 +47,7 @@ from .selection import Selector
 __all__ = [
     "POOL_STRATEGIES",
     "POPULAR_PROVIDER_IDS",
+    "AccessRoute",
     "AuthBroker",
     "AuthMethod",
     "AuthorizationPending",
@@ -62,6 +69,7 @@ __all__ = [
     "OAuthError",
     "OAuthProviderConfig",
     "ProfileRegistry",
+    "ProviderAccess",
     "ProviderSpec",
     "SearchHit",
     "SecretStore",
@@ -70,6 +78,8 @@ __all__ = [
     "Selector",
     "discover_environment_profiles",
     "load_overlay",
+    "provider_access",
+    "provider_access_routes",
     "provider_popularity_key",
     "provider_popularity_rank",
 ]

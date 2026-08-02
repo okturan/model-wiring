@@ -7,14 +7,17 @@ from dataclasses import dataclass
 from typing import Any
 
 from model_wiring import (
+    AccessRoute,
     Catalog,
     CredentialProfile,
     ModelSpec,
     ProfileRegistry,
+    ProviderAccess,
     ProviderSpec,
     SelectionIntent,
     SelectionPlan,
     Selector,
+    provider_access,
     provider_popularity_key,
 )
 
@@ -27,6 +30,9 @@ class ProviderView:
     runnable_model_count: int
     match_count: int
     auth_methods: tuple[str, ...]
+    access_routes: tuple[AccessRoute, ...]
+    required_variables: tuple[str, ...]
+    credential_state: str
     profile_count: int
     state: str
     state_label: str
@@ -43,6 +49,9 @@ class ProviderView:
             "runnable_model_count": self.runnable_model_count,
             "match_count": self.match_count,
             "auth_methods": list(self.auth_methods),
+            "access_routes": [route.to_dict() for route in self.access_routes],
+            "required_variables": list(self.required_variables),
+            "credential_state": self.credential_state,
             "profile_count": self.profile_count,
             "state": self.state,
             "state_label": self.state_label,
@@ -80,6 +89,14 @@ class ModelPreview:
     tiers: tuple[str, ...]
     route_supported: bool
     route_support_reason: str | None
+    credential_state: str = "configured"
+    required_variables: tuple[str, ...] = ()
+
+    @property
+    def usable_now(self) -> bool:
+        """Execution support and a credential are independent requirements."""
+
+        return self.route_supported and self.credential_state == "configured"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -94,6 +111,9 @@ class ModelPreview:
             "tiers": list(self.tiers),
             "route_supported": self.route_supported,
             "route_support_reason": self.route_support_reason,
+            "credential_state": self.credential_state,
+            "required_variables": list(self.required_variables),
+            "usable_now": self.usable_now,
         }
 
 
@@ -634,15 +654,17 @@ class SelectionController:
     def _provider_view(self, provider_id: str, index: int) -> ProviderView:
         provider = self.catalog.provider(provider_id)
         state, supported, profiles, reason = self._provider_state(provider)
+        access = provider_access(provider, profiles)
         return ProviderView(
             id=provider.id,
             name=provider.name,
             model_count=len(provider.models),
             runnable_model_count=len(supported),
             match_count=self._provider_matches.get(provider.id, len(provider.models)),
-            auth_methods=tuple(
-                dict.fromkeys(method.kind for method in provider.auth_methods)
-            ),
+            auth_methods=tuple(dict.fromkeys(route.kind for route in access.routes)),
+            access_routes=access.routes,
+            required_variables=access.required_variables,
+            credential_state=access.credential_state,
             profile_count=len(profiles),
             state=state,
             state_label={
@@ -682,15 +704,25 @@ class SelectionController:
                 reasons[0] if reasons else "No models are catalogued for this provider."
             )
             return "catalog", supported, profiles, reason
-        if self._requires_auth(provider) and not profiles:
-            return "connect", supported, profiles, "Authentication is required."
+        access = provider_access(provider, profiles)
+        if access.credential_state == "unavailable":
+            return (
+                "catalog",
+                supported,
+                profiles,
+                "No way to connect this provider is known.",
+            )
+        if access.credential_state == "connectable":
+            return "connect", supported, profiles, _connect_reason(access)
         return "ready", supported, profiles, None
 
     @staticmethod
     def _requires_auth(provider: ProviderSpec) -> bool:
-        return any(method.kind != "anonymous" for method in provider.auth_methods)
+        return any(route.needs_credential for route in provider_access(provider).routes)
 
     def _preview(self, model: ModelSpec) -> ModelPreview:
+        provider = self.catalog.provider(model.provider_id)
+        access = provider_access(provider, self._profiles_for(model.provider_id))
         return ModelPreview(
             id=model.qualified_id,
             provider=model.provider_id,
@@ -705,6 +737,8 @@ class SelectionController:
             tiers=self._tiers(model),
             route_supported=self._support_reason(model) is None,
             route_support_reason=self._support_reason(model),
+            credential_state=access.credential_state,
+            required_variables=access.required_variables,
         )
 
     def _clear_selection(self) -> None:
@@ -806,3 +840,15 @@ def _cycle(current: str | None, options: tuple[str, ...]) -> str | None:
     if current not in options:
         return options[0]
     return options[(options.index(current) + 1) % len(options)]
+
+
+def _connect_reason(access: ProviderAccess) -> str:
+    """Say what the user must supply, not merely that something is missing."""
+
+    variables = access.required_variables
+    if variables:
+        return f"Needs {', '.join(variables)} or a stored credential."
+    labels = tuple(dict.fromkeys(route.label for route in access.routes))
+    if labels:
+        return f"Needs access via {' or '.join(labels).lower()}."
+    return "Authentication is required."
