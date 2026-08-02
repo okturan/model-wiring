@@ -24,6 +24,7 @@ from .contracts import (
     utc_now,
 )
 from .errors import CatalogError, CatalogUnavailable, SelectionNotFound
+from .popularity import provider_popularity_rank
 
 MODELS_DEV_URL = "https://models.dev/api.json"
 
@@ -184,6 +185,12 @@ class Catalog:
                     )
                 auth_methods = tuple(methods)
             known = {"id", "name", "npm", "env", "api", "doc", "models"}
+            metadata = {
+                key: value for key, value in provider_raw.items() if key not in known
+            }
+            popularity_rank = provider_popularity_rank(provider_id)
+            if popularity_rank is not None:
+                metadata.setdefault("popularity_rank", popularity_rank)
             providers[provider_id] = ProviderSpec(
                 id=provider_id,
                 name=str(provider_raw.get("name") or provider_id),
@@ -193,11 +200,7 @@ class Catalog:
                 env=env,
                 auth_methods=auth_methods,
                 models=models,
-                metadata={
-                    key: value
-                    for key, value in provider_raw.items()
-                    if key not in known
-                },
+                metadata=metadata,
             )
 
         aliases: dict[str, str] = {}
@@ -507,8 +510,12 @@ def _apply_overlay(
             "metadata",
         }
         metadata = dict(base.metadata) if base else {}
-        metadata.update(raw.get("metadata") or {})
+        explicit_metadata = dict(raw.get("metadata") or {})
+        metadata.update(explicit_metadata)
         metadata.update({key: value for key, value in raw.items() if key not in known})
+        popularity_rank = provider_popularity_rank(provider_id)
+        if popularity_rank is not None and "popularity_rank" not in explicit_metadata:
+            metadata["popularity_rank"] = popularity_rank
         providers[provider_id] = ProviderSpec(
             id=provider_id,
             name=str(raw.get("name") or (base.name if base else provider_id)),

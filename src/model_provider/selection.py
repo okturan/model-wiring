@@ -69,7 +69,7 @@ class Selector:
                 f"selected credential profile {profile.id} ({profile.billing_kind} billing)"
             )
         else:
-            reasons.append("credential profile intentionally unresolved")
+            reasons.append("no credential profile requested")
 
         provider_options: dict[str, object] = {}
         if variant:

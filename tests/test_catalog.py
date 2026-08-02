@@ -9,11 +9,32 @@ from pathlib import Path
 
 from helpers import fixture_catalog, fixture_raw
 
-from model_provider import ModelsDevSource
+from model_provider import (
+    POPULAR_PROVIDER_IDS,
+    ModelsDevSource,
+    provider_popularity_key,
+)
 from model_provider.errors import AmbiguousSelection, CatalogError
 
 
 class CatalogTests(unittest.TestCase):
+    def test_catalog_ships_a_neutral_provider_popularity_order(self) -> None:
+        catalog = fixture_catalog()
+
+        self.assertEqual(
+            ("anthropic", "github-copilot", "openai", "google", "openrouter"),
+            POPULAR_PROVIDER_IDS[:5],
+        )
+        ordered = sorted(
+            (catalog.provider("acme"), catalog.provider("openai")),
+            key=provider_popularity_key,
+        )
+
+        self.assertEqual(["openai", "acme"], [provider.id for provider in ordered])
+        self.assertIsInstance(
+            catalog.provider("openai").metadata.get("popularity_rank"), int
+        )
+
     def test_normalizes_models_dev_and_default_delegated_overlay(self) -> None:
         catalog = fixture_catalog()
 
@@ -24,6 +45,7 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(("low", "high"), model.reasoning_options)
         self.assertIn("fast", model.variants)
         delegated = catalog.provider("openai-codex")
+        self.assertEqual("OpenAI Codex", delegated.name)
         self.assertEqual("openai-codex-sdk", delegated.adapter)
         self.assertEqual("delegated", delegated.auth_methods[0].kind)
         self.assertEqual("subscription", delegated.auth_methods[0].billing_kinds[0])

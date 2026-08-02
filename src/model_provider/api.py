@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .catalog import Catalog
-from .contracts import SelectionIntent
+from .contracts import CredentialProfile, SelectionIntent
 from .errors import AmbiguousSelection, ModelProviderError
+from .popularity import provider_popularity_key
 from .profiles import ProfileRegistry
 from .selection import Selector
 
@@ -19,7 +21,9 @@ MAX_BODY_BYTES = 256 * 1024
 
 class ProviderService:
     def __init__(
-        self, catalog: Catalog, profiles: ProfileRegistry | None = None
+        self,
+        catalog: Catalog,
+        profiles: ProfileRegistry | Sequence[CredentialProfile] | None = None,
     ) -> None:
         self.catalog = catalog
         self.profiles = profiles
@@ -37,7 +41,7 @@ class ProviderService:
                     provider.to_dict(include_models=False)
                     for provider in sorted(
                         self.catalog.snapshot.providers.values(),
-                        key=lambda item: item.id,
+                        key=provider_popularity_key,
                     )
                 ]
             }
@@ -45,14 +49,35 @@ class ProviderService:
             text = query.get("q", [""])[0]
             provider = query.get("provider", [None])[0]
             limit = min(max(int(query.get("limit", ["20"])[0]), 1), 200)
-            hits = (
-                self.catalog.search(text, provider=provider, limit=limit)
-                if text
-                else ()
-            )
-            return 200, {"items": [hit.to_dict() for hit in hits]}
+            if text:
+                items = [
+                    hit.to_dict()
+                    for hit in self.catalog.search(text, provider=provider, limit=limit)
+                ]
+            else:
+                provider_id = self.catalog.provider(provider).id if provider else None
+                items = [
+                    {
+                        "score": None,
+                        "provider": candidate_provider.to_dict(include_models=False),
+                        "model": model.to_dict(),
+                    }
+                    for candidate_provider in sorted(
+                        self.catalog.snapshot.providers.values(),
+                        key=provider_popularity_key,
+                    )
+                    if provider_id is None or candidate_provider.id == provider_id
+                    for model in sorted(
+                        candidate_provider.models.values(), key=lambda item: item.id
+                    )
+                ][:limit]
+            return 200, {"items": items}
         if path == "/v1/profiles":
-            items = self.profiles.list() if self.profiles else ()
+            items = (
+                self.profiles.list()
+                if isinstance(self.profiles, ProfileRegistry)
+                else tuple(self.profiles or ())
+            )
             return 200, {"items": [profile.to_dict() for profile in items]}
         return 404, {"error": {"type": "not_found", "message": "route not found"}}
 

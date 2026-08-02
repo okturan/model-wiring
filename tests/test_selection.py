@@ -58,6 +58,7 @@ class SelectionTests(unittest.TestCase):
 
         self.assertEqual(first.id, second.id)
         self.assertTrue(first.id.startswith("sel_"))
+        self.assertNotIn("unresolved", " ".join(first.reasons).lower())
 
     def test_bare_duplicate_and_fuzzy_route_are_ambiguous(self) -> None:
         selector = Selector(fixture_catalog())

@@ -15,6 +15,7 @@ from .contracts import CredentialProfile, SelectionIntent
 from .discovery import discover_environment_profiles
 from .errors import AmbiguousSelection, ModelProviderError
 from .pool import POOL_STRATEGIES, CredentialPool
+from .popularity import provider_popularity_key
 from .profiles import ProfileRegistry
 from .selection import Selector
 
@@ -217,7 +218,7 @@ def _catalog_command(args: argparse.Namespace, catalog: Catalog) -> int:
         items = [
             provider.to_dict(include_models=False)
             for provider in sorted(
-                catalog.snapshot.providers.values(), key=lambda item: item.id
+                catalog.snapshot.providers.values(), key=provider_popularity_key
             )
         ]
         _emit({"items": items}, json_output=args.json)

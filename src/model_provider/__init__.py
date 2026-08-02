@@ -30,11 +30,17 @@ from .oauth import (
     OAuthProviderConfig,
 )
 from .pool import POOL_STRATEGIES, CredentialPool
+from .popularity import (
+    POPULAR_PROVIDER_IDS,
+    provider_popularity_key,
+    provider_popularity_rank,
+)
 from .profiles import ProfileRegistry
 from .selection import Selector
 
 __all__ = [
     "POOL_STRATEGIES",
+    "POPULAR_PROVIDER_IDS",
     "AuthBroker",
     "AuthMethod",
     "AuthorizationPending",
@@ -64,4 +70,6 @@ __all__ = [
     "Selector",
     "discover_environment_profiles",
     "load_overlay",
+    "provider_popularity_key",
+    "provider_popularity_rank",
 ]

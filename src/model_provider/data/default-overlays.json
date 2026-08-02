@@ -1,10 +1,12 @@
 {
   "providers": {
     "openai-codex": {
-      "name": "OpenAI Codex subscription",
+      "name": "OpenAI Codex",
       "models_from": "openai",
       "include_models": [
-        "gpt-5.6-luna"
+        "gpt-5.6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra"
       ],
       "adapter": "openai-codex-sdk",
       "api_url": null,
@@ -13,7 +15,8 @@
         {
           "kind": "delegated",
           "billing_kinds": [
-            "subscription"
+            "subscription",
+            "api"
           ],
           "label": "Codex or ChatGPT login",
           "metadata": {
@@ -37,6 +40,22 @@
       },
       "model_patches": {
         "gpt-5.6-luna": {
+          "metadata": {
+            "tiers": [
+              "standard",
+              "fast"
+            ]
+          }
+        },
+        "gpt-5.6-sol": {
+          "metadata": {
+            "tiers": [
+              "standard",
+              "fast"
+            ]
+          }
+        },
+        "gpt-5.6-terra": {
           "metadata": {
             "tiers": [
               "standard",

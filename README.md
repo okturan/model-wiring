@@ -29,6 +29,8 @@ package for CLI, ANSI TUI, and browser selection controls.
 - a Models.dev-backed catalog with local provider/model overlays;
 - provider, model, modality, capability, limit, cost, variant, effort, and tier
   metadata;
+- a shipped, overlay-extensible provider popularity order for human discovery,
+  with stable alphabetical fallback for custom and newly catalogued providers;
 - deterministic selection with explicit ambiguity and incompatibility errors;
 - credential profiles and billing provenance without putting secrets in public
   plans;
@@ -82,6 +84,12 @@ plan = Selector(catalog).select(
 # plan.to_dict() contains profile references and billing provenance, never a key.
 existing_harness.run(selection=plan)
 ```
+
+`POPULAR_PROVIDER_IDS` and `provider_popularity_key()` are public discovery
+primitives. Provider payloads expose the applied rank as non-secret
+`metadata.popularity_rank`; an overlay may replace that rank for a particular
+audience. Application recommendations remain a separate surface concern and do
+not mutate the neutral catalogue order.
 
 ## Credentials and tokens
 
