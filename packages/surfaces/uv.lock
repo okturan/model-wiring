@@ -1,0 +1,23 @@
+version = 1
+revision = 3
+requires-python = ">=3.10"
+
+[[package]]
+name = "model-provider-kit"
+version = "0.1.0"
+source = { editable = "../model-provider-kit" }
+
+[package.metadata]
+requires-dist = [{ name = "keyring", marker = "extra == 'keyring'", specifier = ">=25,<27" }]
+provides-extras = ["keyring"]
+
+[[package]]
+name = "model-provider-surfaces"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "model-provider-kit" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "model-provider-kit", editable = "../model-provider-kit" }]

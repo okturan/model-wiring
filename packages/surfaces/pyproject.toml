@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "model-provider-surfaces"
+version = "0.1.0"
+description = "CLI, ANSI TUI, and web model/provider selection primitives"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["model-provider-kit>=0.1,<0.2"]
+
+[project.scripts]
+model-provider-ui = "model_provider_surfaces.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+model_provider_surfaces = ["web/*.js", "web/*.css", "web/*.html"]
+
+[tool.uv.sources]
+model-provider-kit = { path = "../model-provider-kit", editable = true }
