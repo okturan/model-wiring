@@ -115,6 +115,10 @@ subscription token.
 The selector never silently changes an API-billed profile into a subscription
 profile (or the reverse). Billing route is an explicit part of the plan.
 
+Guided provider onboarding — login drivers, subscription OAuth, delegated
+import, and the CLI/TUI/web connect flows built on this chassis — is specified
+in [`docs/specs/`](../../docs/specs/README.md).
+
 Models.dev environment declarations may describe one key or a multi-variable
 credential bundle. `discover_environment_profiles()` only checks that every
 declared variable exists; it never copies values into profile metadata. A
