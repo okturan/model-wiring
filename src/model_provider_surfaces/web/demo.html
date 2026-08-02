@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Model Provider Picker</title>
+    <style>body{margin:0;padding:5vw;background:#080d14;max-width:1200px;margin-inline:auto}</style>
+  </head>
+  <body>
+    <script type="module" src="./model-provider-picker.js"></script>
+    <model-provider-picker endpoint="http://127.0.0.1:8765"></model-provider-picker>
+    <script>
+      document.querySelector("model-provider-picker").addEventListener(
+        "model-provider-selection",
+        (event) => console.log("SelectionPlan", event.detail),
+      );
+    </script>
+  </body>
+</html>
