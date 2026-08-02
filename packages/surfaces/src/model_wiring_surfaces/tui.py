@@ -11,8 +11,8 @@ import termios
 import tty
 from typing import TextIO
 
-from model_provider import SelectionPlan
-from model_provider.errors import ModelProviderError
+from model_wiring import SelectionPlan
+from model_wiring.errors import ModelProviderError
 
 from .ansi import render_screen
 from .controller import SelectionController

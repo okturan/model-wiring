@@ -1,15 +1,15 @@
 :host {
-  color-scheme: var(--model-provider-color-scheme, dark);
-  --ink: var(--model-provider-ink, #eef5ff);
-  --muted: var(--model-provider-muted, #91a2b8);
-  --panel: var(--model-provider-panel, #111b28);
-  --panel-2: var(--model-provider-panel-2, #172436);
-  --accent: var(--model-provider-accent, #63d9cf);
-  --focus: var(--model-provider-focus, #78aaff);
-  --danger: var(--model-provider-danger, #ff7d8d);
-  --hover: var(--model-provider-hover, #16313a);
-  --ready: var(--model-provider-ready, #88e18b);
-  --connect: var(--model-provider-connect, #f2cf67);
+  color-scheme: var(--model-wiring-color-scheme, dark);
+  --ink: var(--model-wiring-ink, #eef5ff);
+  --muted: var(--model-wiring-muted, #91a2b8);
+  --panel: var(--model-wiring-panel, #111b28);
+  --panel-2: var(--model-wiring-panel-2, #172436);
+  --accent: var(--model-wiring-accent, #63d9cf);
+  --focus: var(--model-wiring-focus, #78aaff);
+  --danger: var(--model-wiring-danger, #ff7d8d);
+  --hover: var(--model-wiring-hover, #16313a);
+  --ready: var(--model-wiring-ready, #88e18b);
+  --connect: var(--model-wiring-connect, #f2cf67);
   display: block;
   color: var(--ink);
   font: 14px/1.45 Inter, ui-sans-serif, system-ui, sans-serif;
@@ -25,8 +25,8 @@
   padding: 22px;
   overflow: hidden;
   border-radius: 18px;
-  background: var(--model-provider-shell, #0b131e);
-  box-shadow: var(--model-provider-shadow, 0 24px 80px #0007);
+  background: var(--model-wiring-shell, #0b131e);
+  box-shadow: var(--model-wiring-shadow, 0 24px 80px #0007);
 }
 
 header,
@@ -164,7 +164,7 @@ select { min-height: 40px; padding: 8px 10px; }
 .search { margin-bottom: 12px; }
 .empty { padding: 42px 10px; color: var(--muted); text-align: center; }
 
-.config { background: var(--model-provider-config, #0e1722); }
+.config { background: var(--model-wiring-config, #0e1722); }
 .config h2 { margin: 12px 0 0; font-size: 19px; }
 .config code { display: block; margin: 4px 0 18px; color: var(--muted); }
 dl { display: grid; grid-template-columns: 100px 1fr; margin: 0 0 18px; }
@@ -176,8 +176,8 @@ dt { color: var(--muted); }
   width: 100%;
   margin-top: 16px;
   padding: 12px;
-  color: var(--model-provider-route-ink, var(--ink));
-  background: var(--model-provider-route-background, #1d5a56);
+  color: var(--model-wiring-route-ink, var(--ink));
+  background: var(--model-wiring-route-background, #1d5a56);
   font-weight: 700;
   cursor: pointer;
 }

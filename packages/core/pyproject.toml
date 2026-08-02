@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "model-provider-kit"
+name = "model-wiring"
 version = "0.1.0"
 description = "Provider, model, credential, and billing-route selection for AI applications"
 readme = "README.md"
@@ -14,10 +14,10 @@ dependencies = []
 keyring = ["keyring>=25,<27"]
 
 [project.scripts]
-model-provider = "model_provider.cli:main"
+model-wiring = "model_wiring.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-model_provider = ["data/*.json"]
+model_wiring = ["data/*.json"]

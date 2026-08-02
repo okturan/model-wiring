@@ -185,16 +185,16 @@ class EnvironmentSecretStore:
 
 
 class KeyringSecretStore:
-    """Optional OS-keyring backend. Install `model-provider-kit[keyring]`."""
+    """Optional OS-keyring backend. Install `model-wiring[keyring]`."""
 
     name = "keyring"
 
-    def __init__(self, service: str = "model-provider-kit") -> None:
+    def __init__(self, service: str = "model-wiring") -> None:
         try:
             import keyring  # type: ignore[import-not-found]
         except ImportError as exc:
             raise CredentialError(
-                "keyring backend requires: pip install 'model-provider-kit[keyring]'"
+                "keyring backend requires: pip install 'model-wiring[keyring]'"
             ) from exc
         self._keyring = keyring
         self._service = service

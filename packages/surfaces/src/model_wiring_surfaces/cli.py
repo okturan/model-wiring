@@ -8,7 +8,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from model_provider import Catalog, ModelsDevSource, ProfileRegistry, load_overlay
+from model_wiring import Catalog, ModelsDevSource, ProfileRegistry, load_overlay
 
 from .ansi import render_screen
 from .assets import copy_web_assets
@@ -17,7 +17,7 @@ from .tui import print_plan, run_tui
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="model-provider-ui")
+    parser = argparse.ArgumentParser(prog="model-wiring-ui")
     parser.add_argument("--cache", type=Path)
     parser.add_argument("--profiles", type=Path)
     parser.add_argument("--overlay", action="append", default=[], type=Path)

@@ -1,4 +1,4 @@
-"""Public exception hierarchy for model-provider-kit."""
+"""Public exception hierarchy for model-wiring."""
 
 from __future__ import annotations
 

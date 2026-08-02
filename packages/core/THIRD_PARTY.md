@@ -9,7 +9,7 @@ The default catalog source is the public Models.dev JSON API:
 - API: <https://models.dev/api.json>
 - upstream license: MIT
 
-Model Provider Kit fetches this data at runtime and records source URL,
+Model Wiring fetches this data at runtime and records source URL,
 retrieval time, and a content digest in every snapshot. It does not vendor the
 full upstream catalog.
 

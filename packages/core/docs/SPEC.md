@@ -1,4 +1,4 @@
-# Model Provider Kit contract
+# Model Wiring contract
 
 ## Boundary
 

@@ -20,7 +20,7 @@ SCHEMA_VERSION = 2
 def default_profile_path() -> Path:
     root = os.environ.get("XDG_CONFIG_HOME")
     base = Path(root).expanduser() if root else Path.home() / ".config"
-    return base / "model-provider-kit" / "profiles.sqlite3"
+    return base / "model-wiring" / "profiles.sqlite3"
 
 
 class ProfileRegistry:

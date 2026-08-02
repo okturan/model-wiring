@@ -304,7 +304,7 @@ def _post_form(
     request_headers = {
         "Accept": "application/json",
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "model-provider-kit/0.1",
+        "User-Agent": "model-wiring/0.1",
         **headers,
     }
     request = Request(

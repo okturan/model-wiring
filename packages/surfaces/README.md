@@ -1,7 +1,7 @@
-# Model Provider Surfaces
+# Model Wiring Surfaces
 
 Reusable CLI, ANSI TUI, and browser controls for
-[`model-provider-kit`](../model-provider-kit). The package does not execute a
+[`model-wiring`](../model-wiring). The package does not execute a
 model; it helps a human form the same secret-free `SelectionIntent` any app can
 form programmatically.
 
@@ -18,7 +18,7 @@ provider catalogue + public profiles
                 ↓
         SelectionIntent
                 ↓
-       model-provider-kit
+       model-wiring
                 ↓
         SelectionPlan event
 
@@ -29,23 +29,23 @@ Surfaces: composable CLI · full-screen ANSI TUI · Web Component
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -e ../model-provider-kit -e .
+.venv/bin/pip install -e ../model-wiring -e .
 
 # Interactive ANSI selector.
-.venv/bin/model-provider-ui pick
+.venv/bin/model-wiring-ui pick
 
 # Deterministic, non-interactive rendering for another CLI.
-.venv/bin/model-provider-ui render --query luna --no-color
+.venv/bin/model-wiring-ui render --query luna --no-color
 
 # Copy framework-free browser assets into an application.
-.venv/bin/model-provider-ui web-assets --output ./public/model-provider
+.venv/bin/model-wiring-ui web-assets --output ./public/model-wiring
 ```
 
 Python applications can embed the controller and renderer:
 
 ```python
-from model_provider import Catalog
-from model_provider_surfaces import SelectionController, render_screen
+from model_wiring import Catalog
+from model_wiring_surfaces import SelectionController, render_screen
 
 controller = SelectionController(Catalog.from_cache_or_sync())
 print(render_screen(controller.view(), color=False))
@@ -69,21 +69,21 @@ Start typing anywhere in provider/model browsing to search immediately;
 Mode and access controls appear only after a model is chosen and use uppercase
 `E`/`V`/`T`/`P`, so lowercase search text is never intercepted.
 
-The browser primitive is a standards-based `<model-provider-picker>` custom
+The browser primitive is a standards-based `<model-wiring-picker>` custom
 element. Point its `endpoint` attribute at the core loopback API or at an
 application-owned compatible backend:
 
 ```html
-<script type="module" src="/model-provider/model-provider-picker.js"></script>
-<model-provider-picker
+<script type="module" src="/model-wiring/model-wiring-picker.js"></script>
+<model-wiring-picker
   endpoint="http://127.0.0.1:8765"
   recommended-provider="openai-codex"
   recommended-model="openai-codex/gpt-5.6-luna"
   supported-providers="openai-codex"
-></model-provider-picker>
+></model-wiring-picker>
 ```
 
-It dispatches a `model-provider-selection` event whose `detail` is the public
+It dispatches a `model-wiring-selection` event whose `detail` is the public
 SelectionPlan. `supported-providers` is optional; when supplied, every other
 provider is explicitly catalogue-only and cannot be resolved by the component.
 Tokens never enter the component.
@@ -93,8 +93,8 @@ included demo on port 8000, start the loopback API with the exact origin rather
 than a wildcard:
 
 ```bash
-model-provider serve --allow-origin http://127.0.0.1:8000
-python3 -m http.server 8000 --directory ./public/model-provider
+model-wiring serve --allow-origin http://127.0.0.1:8000
+python3 -m http.server 8000 --directory ./public/model-wiring
 ```
 
 ## Development
@@ -103,7 +103,7 @@ python3 -m http.server 8000 --directory ./public/model-provider
 uv sync --locked
 .venv/bin/python -m unittest discover -s tests -v
 .venv/bin/python -m compileall -q src tests
-node --check src/model_provider_surfaces/web/model-provider-picker.js
+node --check src/model_wiring_surfaces/web/model-wiring-picker.js
 ```
 
 No license has been selected for this project yet.

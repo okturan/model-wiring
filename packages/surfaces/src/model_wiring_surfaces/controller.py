@@ -6,7 +6,7 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from model_provider import (
+from model_wiring import (
     Catalog,
     CredentialProfile,
     ModelSpec,

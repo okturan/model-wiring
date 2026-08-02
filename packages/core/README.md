@@ -1,6 +1,6 @@
-# Model Provider Kit
+# Model Wiring
 
-Model Provider Kit is the reusable provider/model/auth selection layer that an
+Model Wiring is the reusable provider/model/auth selection layer that an
 AI application should not have to rebuild. It is intentionally **not** an agent
 harness: it does not run prompts, tools, loops, or sessions.
 
@@ -9,7 +9,7 @@ harness: it does not run prompts, tools, loops, or sessions.
           |
           v
  +---------------------------+
- | model-provider-kit        |
+ | model-wiring        |
  | catalog + auth + selector |
  +---------------------------+
        | credential-free SelectionPlan
@@ -21,7 +21,7 @@ harness: it does not run prompts, tools, loops, or sessions.
 ```
 
 The same core is usable as a Python library, a Unix JSON CLI, or a loopback JSON
-service. [`model-provider-surfaces`](../model-provider-surfaces) is its sibling
+service. [`model-wiring-surfaces`](../model-wiring-surfaces) is its sibling
 package for CLI, ANSI TUI, and browser selection controls.
 
 ## What it owns
@@ -52,13 +52,13 @@ python3 -m venv .venv
 .venv/bin/pip install -e .
 
 # Fetch and cache the current catalog.
-.venv/bin/model-provider catalog sync
+.venv/bin/model-wiring catalog sync
 
 # Machine-readable discovery.
-.venv/bin/model-provider catalog search 'openai/luna' --json
+.venv/bin/model-wiring catalog search 'openai/luna' --json
 
 # Resolve an auditable, secret-free selection plan.
-.venv/bin/model-provider select \
+.venv/bin/model-wiring select \
   --model openai/gpt-5.6-luna \
   --effort high \
   --variant fast \
@@ -69,7 +69,7 @@ python3 -m venv .venv
 Applications can use the Python API directly:
 
 ```python
-from model_provider import Catalog, SelectionIntent, Selector
+from model_wiring import Catalog, SelectionIntent, Selector
 
 catalog = Catalog.from_cache_or_sync()
 plan = Selector(catalog).select(

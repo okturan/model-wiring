@@ -21,7 +21,7 @@ from .selection import Selector
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="model-provider")
+    parser = argparse.ArgumentParser(prog="model-wiring")
     parser.add_argument("--cache", type=Path, help="Models.dev cache path")
     parser.add_argument("--profiles", type=Path, help="credential-profile SQLite path")
     parser.add_argument(

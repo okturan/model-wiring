@@ -26,7 +26,7 @@ None. This repository has no existing OpenSpec capability specifications.
 
 ## Impact
 
-- Shared public view and controller contracts in `model_provider_surfaces.controller`.
+- Shared public view and controller contracts in `model_wiring_surfaces.controller`.
 - ANSI rendering and terminal input behavior in `ansi.py` and `tui.py`.
 - Framework-free web component markup, behavior, and styling.
 - Existing CLI rendering behavior and package exports.

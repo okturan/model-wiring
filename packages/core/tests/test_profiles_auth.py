@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from model_provider import (
+from model_wiring import (
     AuthBroker,
     CredentialMaterial,
     CredentialProfile,
@@ -15,7 +15,7 @@ from model_provider import (
     MemorySecretStore,
     ProfileRegistry,
 )
-from model_provider.errors import CredentialError, RefreshError, SecretNotFound
+from model_wiring.errors import CredentialError, RefreshError, SecretNotFound
 
 
 class FakeRefreshDriver:

@@ -9,12 +9,12 @@ from pathlib import Path
 
 from helpers import fixture_catalog, fixture_raw
 
-from model_provider import (
+from model_wiring import (
     POPULAR_PROVIDER_IDS,
     ModelsDevSource,
     provider_popularity_key,
 )
-from model_provider.errors import AmbiguousSelection, CatalogError
+from model_wiring.errors import AmbiguousSelection, CatalogError
 
 
 class CatalogTests(unittest.TestCase):

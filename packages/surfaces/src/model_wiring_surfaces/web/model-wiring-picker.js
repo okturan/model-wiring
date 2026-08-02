@@ -1,6 +1,6 @@
-const stylesheet = new URL("./model-provider-picker.css", import.meta.url).href;
+const stylesheet = new URL("./model-wiring-picker.css", import.meta.url).href;
 
-class ModelProviderPicker extends HTMLElement {
+class ModelWiringPicker extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -78,7 +78,7 @@ class ModelProviderPicker extends HTMLElement {
         `${this.state.providers.length} providers · choose one to continue`,
       );
       this.dispatchEvent(
-        new CustomEvent("model-provider-picker-ready", {
+        new CustomEvent("model-wiring-picker-ready", {
           detail: {
             providers: this.state.providers.length,
             models: this.state.hits.length,
@@ -308,7 +308,7 @@ class ModelProviderPicker extends HTMLElement {
       });
       this.setStatus(`Ready: ${plan.qualified_model}`);
       this.dispatchEvent(
-        new CustomEvent("model-provider-selection", {
+        new CustomEvent("model-wiring-selection", {
           detail: plan,
           bubbles: true,
           composed: true,
@@ -560,6 +560,6 @@ class ModelProviderPicker extends HTMLElement {
   }
 }
 
-customElements.define("model-provider-picker", ModelProviderPicker);
+customElements.define("model-wiring-picker", ModelWiringPicker);
 
-export { ModelProviderPicker };
+export { ModelWiringPicker };

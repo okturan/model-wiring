@@ -5,8 +5,8 @@ import unittest
 
 from helpers import fixture_catalog
 
-from model_provider import CredentialProfile, SelectionIntent, Selector
-from model_provider.errors import (
+from model_wiring import CredentialProfile, SelectionIntent, Selector
+from model_wiring.errors import (
     AmbiguousSelection,
     IncompatibleSelection,
     ProfileError,

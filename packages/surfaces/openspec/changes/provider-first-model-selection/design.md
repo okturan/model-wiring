@@ -2,7 +2,7 @@
 
 `SelectionController` currently materializes one global `_models` list and one model cursor. A provider may constrain `browse()` or `search()`, but provider identity is not navigation state. The ANSI renderer therefore opens on a flat cross-provider list, repeats application support on every row, leaves its detail area empty until a model is explicitly chosen, and exposes model configuration shortcuts before the provider decision exists. The Web Component repeats the same conceptual shape with a provider `<select>` above a global result list.
 
-The catalogue and secret-free selection contracts remain owned by `model-provider-kit`. This package owns reusable human interaction. Atlas supplies an application-specific `route_support` predicate and preferred Codex routes; only Atlas owns execution.
+The catalogue and secret-free selection contracts remain owned by `model-wiring`. This package owns reusable human interaction. Atlas supplies an application-specific `route_support` predicate and preferred Codex routes; only Atlas owns execution.
 
 ## Goals / Non-Goals
 
@@ -43,7 +43,7 @@ Provider states are:
 
 Rows sort by readiness, then application preference, then the catalogue's shared popularity rank, then stable provider name/id. The popularity list is a neutral discovery default rather than a claim derived from catalogue breadth; applications may promote their own executable route without rewriting it. During search, providers with matches precede zero-match providers without changing readiness truth. Unsupported providers remain browseable and expose their reason, but `resolve()` continues to reject their models.
 
-Alternative considered: treat every catalogue provider as runnable because `model-provider-kit` can resolve an intent. Rejected because selection resolution is not an inference executor and Atlas must not claim capabilities it does not ship.
+Alternative considered: treat every catalogue provider as runnable because `model-wiring` can resolve an intent. Rejected because selection resolution is not an inference executor and Atlas must not claim capabilities it does not ship.
 
 ### 3. Search is provider-aware
 

@@ -40,7 +40,7 @@ def content_digest(value: Any) -> str:
 def default_cache_path() -> Path:
     root = os.environ.get("XDG_CACHE_HOME")
     base = Path(root).expanduser() if root else Path.home() / ".cache"
-    return base / "model-provider-kit" / "models-dev.json"
+    return base / "model-wiring" / "models-dev.json"
 
 
 @dataclass(frozen=True)
@@ -79,7 +79,7 @@ class ModelsDevSource:
 
     @staticmethod
     def _download(url: str, timeout: float) -> bytes:
-        request = Request(url, headers={"User-Agent": "model-provider-kit/0.1"})
+        request = Request(url, headers={"User-Agent": "model-wiring/0.1"})
         with urlopen(request, timeout=timeout) as response:
             return response.read()
 
@@ -351,7 +351,7 @@ def load_overlay(path: Path) -> Mapping[str, Any]:
 
 
 def _load_default_overlay() -> Mapping[str, Any]:
-    resource = files("model_provider").joinpath("data/default-overlays.json")
+    resource = files("model_wiring").joinpath("data/default-overlays.json")
     return json.loads(resource.read_text(encoding="utf-8"))
 
 

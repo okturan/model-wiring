@@ -1,4 +1,4 @@
-"""Reusable human controls for model-provider-kit."""
+"""Reusable human controls for model-wiring."""
 
 from .ansi import AnsiTheme, render_pipeline, render_screen, safe_text
 from .assets import WEB_ASSETS, copy_web_assets

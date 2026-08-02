@@ -6,8 +6,8 @@ from pathlib import Path
 
 from helpers import fixture_catalog
 
-from model_provider import CredentialProfile, ProfileRegistry
-from model_provider.api import ProviderService
+from model_wiring import CredentialProfile, ProfileRegistry
+from model_wiring.api import ProviderService
 
 
 class ProviderServiceTests(unittest.TestCase):

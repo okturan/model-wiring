@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from model_provider import Catalog
+from model_wiring import Catalog
 
 FIXTURE = Path(__file__).parent / "fixtures" / "models-dev.json"
 

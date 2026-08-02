@@ -4,13 +4,13 @@ import time
 import unittest
 from urllib.parse import parse_qs, urlparse
 
-from model_provider import (
+from model_wiring import (
     CredentialMaterial,
     CredentialProfile,
     OAuthClient,
     OAuthProviderConfig,
 )
-from model_provider.oauth import AuthorizationPending, OAuthError
+from model_wiring.oauth import AuthorizationPending, OAuthError
 
 
 class QueueTransport:

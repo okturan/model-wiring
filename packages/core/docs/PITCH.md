@@ -7,7 +7,7 @@ OAuth safely, and show the result in a UI. Agent harnesses repeatedly implement
 this inside their own runtime, making it hard for unrelated applications to
 reuse.
 
-Model Provider Kit extracts only that shared seam.
+Model Wiring extracts only that shared seam.
 
 ```text
                    one selection contract
@@ -20,7 +20,7 @@ Model Provider Kit extracts only that shared seam.
        |                    |                    |
        +------------ provider/model/auth plan --+
                             |
-                    model-provider-kit
+                    model-wiring
 ```
 
 The useful unit is not an agent. It is a portable, credential-free plan plus a

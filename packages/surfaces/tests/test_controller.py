@@ -3,9 +3,9 @@ from __future__ import annotations
 import unittest
 
 from helpers import fixture_catalog
-from model_provider import CredentialProfile
+from model_wiring import CredentialProfile
 
-from model_provider_surfaces import SelectionController
+from model_wiring_surfaces import SelectionController
 
 
 class ControllerTests(unittest.TestCase):

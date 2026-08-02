@@ -10,7 +10,7 @@ from pathlib import Path
 
 from helpers import fixture_catalog
 
-from model_provider_surfaces import (
+from model_wiring_surfaces import (
     SelectionController,
     copy_web_assets,
     enable_character_input,
@@ -18,7 +18,7 @@ from model_provider_surfaces import (
     render_screen,
     safe_text,
 )
-from model_provider_surfaces.tui import _read_key, handle_key
+from model_wiring_surfaces.tui import _read_key, handle_key
 
 
 class AnsiAndAssetTests(unittest.TestCase):
@@ -215,7 +215,7 @@ class AnsiAndAssetTests(unittest.TestCase):
     def test_web_picker_supports_application_owned_recommended_defaults(self) -> None:
         source = (
             Path(__file__).parents[1]
-            / "src/model_provider_surfaces/web/model-provider-picker.js"
+            / "src/model_wiring_surfaces/web/model-wiring-picker.js"
         ).read_text()
 
         for attribute in (
@@ -231,7 +231,7 @@ class AnsiAndAssetTests(unittest.TestCase):
         ):
             self.assertIn(attribute, source)
         self.assertIn("set endpoint(value)", source)
-        self.assertIn("model-provider-picker-ready", source)
+        self.assertIn("model-wiring-picker-ready", source)
         self.assertIn("Access route", source)
         self.assertIn("data-providers", source)
         self.assertIn("activateProvider", source)
@@ -243,7 +243,7 @@ class AnsiAndAssetTests(unittest.TestCase):
         self.assertNotIn("Unresolved", source)
         stylesheet = (
             Path(__file__).parents[1]
-            / "src/model_provider_surfaces/web/model-provider-picker.css"
+            / "src/model_wiring_surfaces/web/model-wiring-picker.css"
         ).read_text()
         self.assertIn(":host([compact])", stylesheet)
         self.assertNotIn("border-left", stylesheet)
