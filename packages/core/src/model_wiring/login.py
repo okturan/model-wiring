@@ -372,15 +372,25 @@ class LoginBroker:
         profiles: ProfileRegistry,
         stores: Mapping[str, SecretStore] | None = None,
         default_store: str = "keyring",
-        drivers: Iterable[LoginDriver] = DEFAULT_DRIVERS,
+        drivers: Iterable[LoginDriver] | None = None,
         environ: Mapping[str, str] | None = None,
         delegated_candidates: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
+        oauth_transport: Any = None,
     ) -> None:
         self.catalog = catalog
         self.profiles = profiles
         self.stores: dict[str, SecretStore] = dict(stores or {})
         self.stores.setdefault("memory", MemorySecretStore())
         self.default_store = default_store
+        if drivers is None:
+            # Imported here because the OAuth drivers build on this module.
+            from .oauth_login import OAuthDeviceDriver, OAuthPkceDriver
+
+            drivers = (
+                *DEFAULT_DRIVERS,
+                OAuthPkceDriver(transport=oauth_transport),
+                OAuthDeviceDriver(transport=oauth_transport),
+            )
         self.drivers = {driver.id: driver for driver in drivers}
         self.environ = os.environ if environ is None else environ
         self.delegated_candidates = dict(delegated_candidates or {})

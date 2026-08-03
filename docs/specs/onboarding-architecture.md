@@ -119,6 +119,43 @@ ANSI picker renders a connect view from R2 prompts; the web component emits a
 `model-wiring-connect` intent event with the chosen provider/route and renders
 prompts the host feeds back in. Controller API mirrors both.
 
+### R8a — OAuth endpoints are data, never code (implemented)
+
+`oauth_pkce` and `oauth_device` read the authorization server from the route's
+`metadata.oauth`, so this repository ships **no** third-party endpoint or
+client id it cannot verify. A consumer — or a future overlay, once the values
+are pinned to first-party sources — supplies them:
+
+```json
+{
+  "providers": {
+    "example": {
+      "access_routes": [
+        {
+          "id": "subscription",
+          "kind": "oauth",
+          "billing_kind": "subscription",
+          "label": "Example subscription",
+          "driver": "oauth_pkce",
+          "metadata": {
+            "oauth": {
+              "client_id": "<public client id from the provider's own tooling>",
+              "authorization_endpoint": "https://example/authorize",
+              "token_endpoint": "https://example/token",
+              "scopes": ["openid"],
+              "device_authorization_endpoint": "https://example/device"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+A route missing any required field fails with a message naming what is absent,
+rather than attempting a request against a guessed endpoint.
+
 ### R8 — Client identity policy
 
 Each flow spec declares one of, in order of preference:
@@ -153,7 +190,7 @@ spec and surfaced to the user rather than hidden.
 | --- | --- | --- |
 | M1 Route visibility | Every provider shows its real connect routes in CLI/TUI/web | R1, R7 (display) |
 | M2 Keys and imports | API-key paste, env promotion, delegated imports working end to end | R2 (paste/import), R4 |
-| M3 Subscription OAuth | Anthropic, GitHub Copilot, OpenAI/Codex browser+device logins | R2, R3, R8 |
+| M3 Subscription OAuth | Browser (PKCE) and device sign-in drivers, loopback redirect | R2, R3, R8 |
 | M4 Trust | Probes, entitlement labels, account fingerprints in all surfaces | R5, R6 |
 | M5 Concurrency (deferred) | Single-writer broker daemon / gateway à la OMP, if multi-client demand appears | — |
 

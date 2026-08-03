@@ -45,6 +45,12 @@ from .oauth import (
     OAuthError,
     OAuthProviderConfig,
 )
+from .oauth_login import (
+    LoopbackRedirect,
+    OAuthDeviceDriver,
+    OAuthPkceDriver,
+    route_oauth_config,
+)
 from .pool import POOL_STRATEGIES, CredentialPool
 from .popularity import (
     POPULAR_PROVIDER_IDS,
@@ -76,12 +82,15 @@ __all__ = [
     "LoginDriver",
     "LoginResult",
     "LoginSession",
+    "LoopbackRedirect",
     "MemorySecretStore",
     "ModelSpec",
     "ModelVariant",
     "ModelsDevSource",
     "OAuthClient",
+    "OAuthDeviceDriver",
     "OAuthError",
+    "OAuthPkceDriver",
     "OAuthProviderConfig",
     "OpenUrlPrompt",
     "ProfileRegistry",
@@ -100,4 +109,5 @@ __all__ = [
     "provider_access_routes",
     "provider_popularity_key",
     "provider_popularity_rank",
+    "route_oauth_config",
 ]
