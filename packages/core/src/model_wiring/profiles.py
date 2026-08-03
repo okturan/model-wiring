@@ -7,7 +7,7 @@ import os
 import sqlite3
 import time
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
 from uuid import uuid4
 
@@ -47,7 +47,7 @@ class ProfileRegistry:
             os.chmod(self.path.parent, 0o700)
         except OSError:
             pass
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection:
             connection.executescript(
                 """
                 PRAGMA journal_mode = WAL;
@@ -102,6 +102,8 @@ class ProfileRegistry:
                 "INSERT OR REPLACE INTO metadata(key, value) VALUES ('schema_version', ?)",
                 (str(SCHEMA_VERSION),),
             )
+            # closing() releases the descriptor but does not commit for us.
+            connection.commit()
         try:
             os.chmod(self.path, 0o600)
         except OSError:
@@ -109,7 +111,7 @@ class ProfileRegistry:
 
     def upsert(self, profile: CredentialProfile) -> None:
         value = profile.to_dict()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             connection.execute(
                 """
                 INSERT INTO credential_profiles(
@@ -147,7 +149,7 @@ class ProfileRegistry:
             )
 
     def get(self, profile_id: str) -> CredentialProfile:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             row = connection.execute(
                 "SELECT * FROM credential_profiles WHERE id = ?", (profile_id,)
             ).fetchone()
@@ -173,7 +175,7 @@ class ProfileRegistry:
         if enabled_only:
             clauses.append("enabled = 1")
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             rows = connection.execute(
                 f"""SELECT * FROM credential_profiles {where}
                 ORDER BY priority ASC, id ASC""",
@@ -182,7 +184,7 @@ class ProfileRegistry:
         return tuple(_row_to_profile(row) for row in rows)
 
     def delete(self, profile_id: str) -> bool:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             cursor = connection.execute(
                 "DELETE FROM credential_profiles WHERE id = ?", (profile_id,)
             )
@@ -204,7 +206,7 @@ class ProfileRegistry:
         if not profile_ids:
             raise ProfileError("credential pool is empty")
         placeholders = ",".join("?" for _ in profile_ids)
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 rows = connection.execute(
@@ -240,7 +242,7 @@ class ProfileRegistry:
         return _row_to_profile(row)
 
     def usage(self, profile_id: str) -> dict[str, int | float | None]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             row = connection.execute(
                 "SELECT use_count, last_used_at FROM profile_usage WHERE profile_id = ?",
                 (profile_id,),
@@ -265,7 +267,7 @@ class ProfileRegistry:
         acquired = False
         while time.monotonic() < deadline:
             now = time.time()
-            with self._connect() as connection:
+            with closing(self._connect()) as connection:
                 try:
                     connection.execute("BEGIN IMMEDIATE")
                     row = connection.execute(
@@ -301,7 +303,7 @@ class ProfileRegistry:
         try:
             yield
         finally:
-            with self._connect() as connection:
+            with closing(self._connect()) as connection:
                 connection.execute(
                     "DELETE FROM refresh_leases WHERE profile_id = ? AND owner = ?",
                     (profile_id, owner),

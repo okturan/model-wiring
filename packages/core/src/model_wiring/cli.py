@@ -9,11 +9,14 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from .access import provider_access
 from .api import ProviderService, serve
+from .auth import KeyringSecretStore, MemorySecretStore
 from .catalog import Catalog, ModelsDevSource, load_overlay
 from .contracts import CredentialProfile, SelectionIntent
 from .discovery import discover_environment_profiles
-from .errors import AmbiguousSelection, ModelProviderError
+from .errors import AmbiguousSelection, CredentialError, ModelProviderError
+from .login import DELEGATED_CANDIDATES, LoginBroker, LoginResult
 from .pool import POOL_STRATEGIES, CredentialPool
 from .popularity import provider_popularity_key
 from .profiles import ProfileRegistry
@@ -122,6 +125,62 @@ def build_parser() -> argparse.ArgumentParser:
     profile_discover.add_argument("--save", action="store_true")
     _json_flag(profile_discover)
 
+    access = commands.add_parser(
+        "access", help="inspect how providers can be connected"
+    )
+    access_commands = access.add_subparsers(dest="access_command", required=True)
+    access_list = access_commands.add_parser(
+        "list", help="every provider and its access routes"
+    )
+    access_list.add_argument(
+        "--state",
+        choices=("configured", "connectable", "unavailable"),
+        help="only show providers in this credential state",
+    )
+    _json_flag(access_list)
+    access_show = access_commands.add_parser(
+        "show", help="how one provider can be connected"
+    )
+    access_show.add_argument("provider")
+    _json_flag(access_show)
+    access_status = access_commands.add_parser(
+        "status", help="credentials that are already configured"
+    )
+    _json_flag(access_status)
+
+    login = commands.add_parser("login", help="connect a provider")
+    login.add_argument("provider")
+    login.add_argument(
+        "--route", help="access route id, when a provider offers several"
+    )
+    login.add_argument(
+        "--value",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        help="supply a credential non-interactively; repeat for a bundle",
+    )
+    login.add_argument(
+        "--choice", help="identifier of an existing sign-in to delegate to"
+    )
+    login.add_argument(
+        "--from-environment",
+        action="store_true",
+        help="promote the values already exported in this shell into storage",
+    )
+    login.add_argument(
+        "--describe",
+        action="store_true",
+        help="print what this login would ask for, and stop",
+    )
+    login.add_argument("--store", help="secret store name (default: keyring)")
+    _json_flag(login)
+
+    logout = commands.add_parser("logout", help="remove a stored credential profile")
+    logout.add_argument("profile")
+    logout.add_argument("--store", help="secret store name (default: keyring)")
+    _json_flag(logout)
+
     server = commands.add_parser(
         "serve", help="serve the secret-free loopback JSON API"
     )
@@ -177,6 +236,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             plan = Selector(catalog, profiles).select(intent)
             _emit(plan.to_dict(), json_output=args.json)
             return 0
+        if args.command == "access":
+            return _access_command(args, catalog, profiles)
+        if args.command in {"login", "logout"}:
+            return _login_command(args, catalog, profiles)
         if args.command == "serve":
             serve(
                 ProviderService(catalog, profiles),
@@ -331,3 +394,113 @@ def _emit_error(exc: Exception, *, extra: dict[str, Any] | None = None) -> None:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def _access_command(
+    args: argparse.Namespace, catalog: Catalog, profiles: ProfileRegistry
+) -> int:
+    stored = tuple(profiles.list())
+    if args.access_command == "status":
+        _emit(
+            {"items": [profile.to_dict() for profile in stored]},
+            json_output=args.json,
+        )
+        return 0
+    if args.access_command == "show":
+        provider = catalog.provider(args.provider)
+        access = provider_access(provider, _profiles_for(stored, provider.id))
+        _emit(access.to_dict(), json_output=args.json)
+        return 0
+    items = []
+    for provider in sorted(
+        catalog.snapshot.providers.values(), key=provider_popularity_key
+    ):
+        access = provider_access(provider, _profiles_for(stored, provider.id))
+        if args.state and access.credential_state != args.state:
+            continue
+        items.append(
+            {
+                "id": provider.id,
+                "name": provider.name,
+                "credential_state": access.credential_state,
+                "required_variables": list(access.required_variables),
+                "routes": [route.to_dict() for route in access.routes],
+            }
+        )
+    _emit({"items": items}, json_output=args.json)
+    return 0
+
+
+def _login_command(
+    args: argparse.Namespace, catalog: Catalog, profiles: ProfileRegistry
+) -> int:
+    store_name = args.store or "keyring"
+    broker = LoginBroker(
+        catalog,
+        profiles=profiles,
+        stores=_secret_stores(store_name),
+        default_store=store_name,
+        delegated_candidates=DELEGATED_CANDIDATES,
+    )
+    if args.command == "logout":
+        removed = broker.logout(args.profile)
+        _emit(
+            {"profile": args.profile, "removed": removed},
+            json_output=args.json,
+        )
+        return 0 if removed else 1
+    if args.from_environment:
+        result = broker.promote_environment(args.provider, store=store_name)
+        _emit(result.to_dict(), json_output=args.json)
+        return 0
+    session = broker.begin(args.provider, route_id=args.route, store=store_name)
+    if args.describe:
+        _emit(session.to_dict(), json_output=args.json)
+        return 0
+    response = _login_response(args, session)
+    if response is None:
+        # Nothing to submit yet: describe the prompt so a caller can collect it.
+        _emit(session.to_dict(), json_output=args.json)
+        return 0
+    outcome = broker.advance(session, response, store=store_name)
+    if isinstance(outcome, LoginResult):
+        _emit(outcome.to_dict(), json_output=args.json)
+        return 0
+    _emit(outcome.to_dict(), json_output=args.json)
+    return 0
+
+
+def _login_response(args: argparse.Namespace, session: Any) -> dict[str, Any] | None:
+    if args.choice:
+        return {"choice": args.choice}
+    if args.value:
+        return dict(_parse_assignment(item) for item in args.value)
+    return None
+
+
+def _parse_assignment(value: str) -> tuple[str, str]:
+    name, separator, secret = value.partition("=")
+    if not separator or not name.strip():
+        raise ValueError(f"expected NAME=VALUE, got {value!r}")
+    return name.strip(), secret
+
+
+def _profiles_for(
+    profiles: Sequence[CredentialProfile], provider_id: str
+) -> tuple[CredentialProfile, ...]:
+    return tuple(
+        profile
+        for profile in profiles
+        if profile.provider_id == provider_id and profile.enabled
+    )
+
+
+def _secret_stores(name: str) -> dict[str, Any]:
+    stores: dict[str, Any] = {"memory": MemorySecretStore()}
+    if name == "keyring":
+        try:
+            stores["keyring"] = KeyringSecretStore()
+        except CredentialError:
+            # Reported only if the user actually asks to store something.
+            pass
+    return stores
