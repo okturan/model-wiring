@@ -7,7 +7,7 @@ import unittest
 from datetime import timedelta
 from pathlib import Path
 
-from helpers import fixture_catalog, fixture_raw
+from helpers import POSIX_PERMISSIONS, fixture_catalog, fixture_raw
 from model_wiring import (
     POPULAR_PROVIDER_IDS,
     ModelsDevSource,
@@ -91,7 +91,8 @@ class CatalogTests(unittest.TestCase):
             raw, fetched_at = source.sync()
             self.assertEqual(fixture_raw(), raw)
             self.assertTrue(fetched_at.endswith("Z"))
-            self.assertEqual(0o600, os.stat(cache).st_mode & 0o777)
+            if POSIX_PERMISSIONS:
+                self.assertEqual(0o600, os.stat(cache).st_mode & 0o777)
             cached, _ = source.load_cache(max_age=timedelta(days=1))
             self.assertEqual(raw, cached)
 

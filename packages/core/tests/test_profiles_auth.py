@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from helpers import POSIX_PERMISSIONS
 from model_wiring import (
     AuthBroker,
     CredentialMaterial,
@@ -76,7 +77,8 @@ class ProfileAndAuthTests(unittest.TestCase):
         self.profiles.upsert(second)
         self.profiles.upsert(first)
 
-        self.assertEqual(0o600, os.stat(self.database).st_mode & 0o777)
+        if POSIX_PERMISSIONS:
+            self.assertEqual(0o600, os.stat(self.database).st_mode & 0o777)
         self.assertEqual(
             ["first", "second"], [item.id for item in self.profiles.list()]
         )

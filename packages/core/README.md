@@ -105,7 +105,9 @@ Credential metadata and credential material are deliberately separate:
 ```
 
 The default file-backed profile registry is SQLite in WAL mode with `0600`
-permissions. Secret material is never stored in that database. Install the
+permissions on POSIX systems. Windows exposes only a read-only bit, so the
+equivalent restriction is not available there; prefer the OS keyring on
+Windows. Secret material is never stored in that database. Install the
 `keyring` extra for OS-backed storage or supply a custom `SecretStore`. OAuth
 refresh logic accepts standards-compliant provider drivers; the built-in OAuth
 client handles PKCE, device authorization, and refresh. Delegated profiles let
