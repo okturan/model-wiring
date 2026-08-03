@@ -646,6 +646,10 @@ class ContentHandlingTests(GatewayTestCase):
         self.assertEqual(200, response.status)
         self.assertIn(completion, payload)
         self.assertEqual(prompt, json.loads(self.provider.bodies[0])["prompt"])
+        # The gateway logs from its worker thread, which can still be running
+        # when the client has finished reading. Wait for the request to be
+        # recorded before judging what was logged, or this races.
+        metrics = json.dumps([record.to_dict() for record in self.records()])
         self.assertTrue(self.captured.records, "nothing logged, so nothing was checked")
         self.assertTrue(
             any(
@@ -655,7 +659,6 @@ class ContentHandlingTests(GatewayTestCase):
             "the gateway logged nothing, so this proves nothing",
         )
         logged = self.captured.text()
-        metrics = json.dumps([record.to_dict() for record in self.records()])
         for secret in (prompt, completion, PROVIDER_SECRET, self.gateway.token):
             self.assertNotIn(secret, logged)
             self.assertNotIn(secret, metrics)
