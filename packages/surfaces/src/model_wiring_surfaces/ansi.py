@@ -375,6 +375,7 @@ def _preview_rows(view: SelectionView, width: int) -> list[str]:
         else:
             needs = ", ".join(preview.required_variables) or "a stored credential"
         result.append(_truncate("needs         " + needs, width))
+        result.extend(_terms_rows(preview.terms_posture, width))
     modes: list[str] = []
     if preview.variants:
         modes.append("variant " + "/".join(preview.variants))
@@ -429,6 +430,32 @@ def _footer(view: SelectionView, width: int) -> str:
         "T tier   P access   type to search",
         width,
     )
+
+
+# A route that verified nothing offers exactly what a first-party-only one
+# offers, so the connect view says the same thing about both.
+DELEGATED_ONLY_POSTURES = frozenset({"first_party_only", "unverified"})
+
+DELEGATED_ONLY_NOTICE = "only an existing sign-in from the provider's own tool is used"
+
+
+def _terms_rows(posture: str | None, width: int) -> list[str]:
+    """State the terms position before a person authorises anything."""
+
+    if posture is None:
+        return []
+    rows = ["terms         " + _terms_label(posture)]
+    if posture in DELEGATED_ONLY_POSTURES:
+        rows.append("              " + DELEGATED_ONLY_NOTICE)
+    return [_truncate(row, width) for row in rows]
+
+
+def _terms_label(value: str | None) -> str:
+    return {
+        "first_party_only": "first-party clients only",
+        "third_party_permitted": "third-party clients permitted",
+        "unverified": "terms not verified",
+    }.get(value or "", safe_text(value or "not declared").replace("_", " "))
 
 
 def _auth_label(value: str | None) -> str:

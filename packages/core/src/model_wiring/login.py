@@ -338,6 +338,41 @@ DEFAULT_DRIVERS: tuple[LoginDriver, ...] = (
     DelegatedImportDriver(),
 )
 
+# Drivers that authenticate as a client identity of ours rather than reusing a
+# sign-in the user already has. Only a route whose terms posture explicitly
+# permits third-party clients may offer them.
+THIRD_PARTY_CLIENT_DRIVERS: tuple[str, ...] = ("oauth_pkce", "oauth_device")
+
+
+def permits_third_party_client(route: AccessRoute) -> bool:
+    """Only an explicit permission counts; ``unverified`` is a refusal."""
+
+    return route.terms_posture == "third_party_permitted"
+
+
+def permitted_drivers(route: AccessRoute) -> tuple[str, ...]:
+    """Driver ids ``route`` may use, safest first.
+
+    Delegated import and a credential the user already holds need no client
+    identity of ours, so posture never gates them; browser and device sign-in
+    do, so they appear only for a ``third_party_permitted`` route.
+    """
+
+    if not route.needs_credential:
+        return ()
+    offered = [DelegatedImportDriver.id]
+    declared = route.driver or ""
+    if (
+        declared
+        and declared not in offered
+        and declared not in THIRD_PARTY_CLIENT_DRIVERS
+    ):
+        offered.append(declared)
+    if permits_third_party_client(route):
+        offered.extend(THIRD_PARTY_CLIENT_DRIVERS)
+    return tuple(offered)
+
+
 # Sign-ins first-party tools create on this machine. Discovery only checks that
 # the artifact exists; contents stay unread until the user picks one. A wrong or
 # stale path therefore hides the candidate rather than offering a broken route.
@@ -429,17 +464,28 @@ class LoginBroker:
         )
         return (delegated, *routes)
 
+    def offered_drivers(
+        self, provider_id: str, *, route_id: str | None = None
+    ) -> tuple[str, ...]:
+        """Drivers a surface may offer for this route: permitted and registered."""
+
+        route = self._route(self.catalog.provider(provider_id), route_id)
+        return tuple(
+            driver for driver in permitted_drivers(route) if driver in self.drivers
+        )
+
     def begin(
         self,
         provider_id: str,
         *,
         route_id: str | None = None,
+        driver: str | None = None,
         store: str | None = None,
     ) -> LoginSession:
         provider = self.catalog.provider(provider_id)
         route = self._route(provider, route_id)
-        driver = self._driver(route)
-        return driver.begin(provider, route, self._context(store))
+        selected = self._driver(route, driver)
+        return selected.begin(provider, route, self._context(store))
 
     def advance(
         self,
@@ -519,12 +565,21 @@ class LoginBroker:
                 return route
         raise ValueError(f"{provider.name} has no access route {route_id!r}")
 
-    def _driver(self, route: AccessRoute) -> LoginDriver:
-        driver = self.drivers.get(route.driver or "")
+    def _driver(self, route: AccessRoute, requested: str | None = None) -> LoginDriver:
+        driver_id = requested or route.driver or ""
+        if driver_id in THIRD_PARTY_CLIENT_DRIVERS and not permits_third_party_client(
+            route
+        ):
+            raise ValueError(
+                f"{route.label!r} is {route.terms_posture}, so {driver_id} is not "
+                "offered: it would authenticate with a client identity of our own. "
+                "Only an existing sign-in from the provider's own tool is used."
+            )
+        driver = self.drivers.get(driver_id)
         if driver is None:
             raise ValueError(
                 f"no login driver is registered for {route.label!r} "
-                f"({route.driver or route.kind})"
+                f"({driver_id or route.kind})"
             )
         return driver
 

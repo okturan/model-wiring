@@ -1,6 +1,8 @@
 """Provider/model/auth selection without an agent runtime."""
 
 from .access import (
+    DEFAULT_TERMS_POSTURE,
+    TERMS_POSTURES,
     AccessRoute,
     ProviderAccess,
     provider_access,
@@ -15,6 +17,12 @@ from .auth import (
     MemorySecretStore,
     SecretStore,
 )
+from .broker import (
+    CredentialBroker,
+    CredentialResolution,
+    CredentialSnapshot,
+    RuntimeCredential,
+)
 from .catalog import Catalog, ModelsDevSource, SearchHit, load_overlay
 from .contracts import (
     AuthMethod,
@@ -27,7 +35,18 @@ from .contracts import (
     SelectionPlan,
 )
 from .discovery import discover_environment_profiles
+from .gateway import (
+    GatewayRecord,
+    GatewayRoute,
+    InferenceGateway,
+    gateway_routes,
+    gateway_server,
+    make_gateway_handler,
+    provider_gateway_routes,
+    serve_gateway,
+)
 from .login import (
+    THIRD_PARTY_CLIENT_DRIVERS,
     ChoicePrompt,
     LoginBroker,
     LoginDriver,
@@ -36,6 +55,8 @@ from .login import (
     OpenUrlPrompt,
     SecretPrompt,
     UserCodePrompt,
+    permits_third_party_client,
+    permitted_drivers,
 )
 from .oauth import (
     AuthorizationPending,
@@ -57,13 +78,22 @@ from .popularity import (
     provider_popularity_key,
     provider_popularity_rank,
 )
-from .probe import Prober, ProbeResult, entitlement_for
+from .probe import (
+    Prober,
+    ProbeResult,
+    entitlement_for,
+    gateway_probe_driver,
+    gateway_probe_drivers,
+)
 from .profiles import ProfileRegistry
 from .selection import Selector
 
 __all__ = [
+    "DEFAULT_TERMS_POSTURE",
     "POOL_STRATEGIES",
     "POPULAR_PROVIDER_IDS",
+    "TERMS_POSTURES",
+    "THIRD_PARTY_CLIENT_DRIVERS",
     "AccessRoute",
     "AuthBroker",
     "AuthMethod",
@@ -72,12 +102,18 @@ __all__ = [
     "Catalog",
     "CatalogSnapshot",
     "ChoicePrompt",
+    "CredentialBroker",
     "CredentialLease",
     "CredentialMaterial",
     "CredentialPool",
     "CredentialProfile",
+    "CredentialResolution",
+    "CredentialSnapshot",
     "DeviceAuthorization",
     "EnvironmentSecretStore",
+    "GatewayRecord",
+    "GatewayRoute",
+    "InferenceGateway",
     "KeyringSecretStore",
     "LoginBroker",
     "LoginDriver",
@@ -99,6 +135,7 @@ __all__ = [
     "ProfileRegistry",
     "ProviderAccess",
     "ProviderSpec",
+    "RuntimeCredential",
     "SearchHit",
     "SecretPrompt",
     "SecretStore",
@@ -108,10 +145,19 @@ __all__ = [
     "UserCodePrompt",
     "discover_environment_profiles",
     "entitlement_for",
+    "gateway_probe_driver",
+    "gateway_probe_drivers",
+    "gateway_routes",
+    "gateway_server",
     "load_overlay",
+    "make_gateway_handler",
+    "permits_third_party_client",
+    "permitted_drivers",
     "provider_access",
     "provider_access_routes",
+    "provider_gateway_routes",
     "provider_popularity_key",
     "provider_popularity_rank",
     "route_oauth_config",
+    "serve_gateway",
 ]

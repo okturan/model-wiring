@@ -1,8 +1,14 @@
-"""Small loopback JSON service over the same public contracts."""
+"""Small loopback JSON service over the same public contracts.
+
+Every request carries a bearer token issued when the service starts. Binding
+127.0.0.1 keeps the service off the network but not away from other processes on
+the machine, and this service answers questions about a user's credentials.
+"""
 
 from __future__ import annotations
 
 import json
+import secrets
 from collections.abc import Sequence
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -18,6 +24,16 @@ from .profiles import ProfileRegistry
 from .selection import Selector
 
 MAX_BODY_BYTES = 256 * 1024
+
+BEARER_SCHEME = "Bearer"
+
+LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+def issue_token() -> str:
+    """Mint the bearer token one service start uses and prints once."""
+
+    return secrets.token_urlsafe(32)
 
 
 class ProviderService:
@@ -134,12 +150,19 @@ class ProviderService:
 
 
 def make_handler(
-    service: ProviderService, *, allowed_origin: str | None = None
+    service: ProviderService, *, token: str, allowed_origin: str | None = None
 ) -> type[BaseHTTPRequestHandler]:
+    """Serve ``service`` to callers presenting ``token`` and to nobody else."""
+
+    if not token:
+        raise ValueError("the loopback API requires a bearer token")
+
     class Handler(BaseHTTPRequestHandler):
         server_version = "ModelWiring/0.1"
 
         def do_GET(self) -> None:
+            if not self._authorized():
+                return
             parsed = urlparse(self.path)
             try:
                 status, payload = service.get(parsed.path, parse_qs(parsed.query))
@@ -151,6 +174,8 @@ def make_handler(
             self._write(status, payload)
 
         def do_POST(self) -> None:
+            if not self._authorized():
+                return
             length = int(self.headers.get("Content-Length", "0"))
             if length > MAX_BODY_BYTES:
                 self._write(
@@ -178,6 +203,8 @@ def make_handler(
             self._write(status, payload)
 
         def do_OPTIONS(self) -> None:
+            # A preflight carries no Authorization header by definition, so
+            # refusing it here would leave a browser unable to ever present one.
             if allowed_origin is None:
                 self._write(
                     HTTPStatus.FORBIDDEN,
@@ -187,7 +214,9 @@ def make_handler(
             self.send_response(HTTPStatus.NO_CONTENT)
             self.send_header("Access-Control-Allow-Origin", allowed_origin)
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header(
+                "Access-Control-Allow-Headers", "Authorization, Content-Type"
+            )
             self.send_header("Vary", "Origin")
             self.end_headers()
 
@@ -196,7 +225,43 @@ def make_handler(
             # the service with their own access logging.
             del format, args
 
-        def _write(self, status: int, payload: dict[str, Any]) -> None:
+        def _authorized(self) -> bool:
+            presented = _presented_token(self.headers.get("Authorization"))
+            if presented is not None and secrets.compare_digest(presented, token):
+                return True
+            self._drain()
+            self._write(
+                HTTPStatus.UNAUTHORIZED,
+                {
+                    "error": {
+                        "type": "unauthorized",
+                        "message": "this service requires the bearer token it "
+                        "printed at startup",
+                    }
+                },
+                headers=(("WWW-Authenticate", BEARER_SCHEME),),
+            )
+            return False
+
+        def _drain(self) -> None:
+            """Consume a refused request's declared body, unread.
+
+            Closing a socket with unread bytes costs the caller the refusal it
+            was about to read.
+            """
+
+            declared = self.headers.get("Content-Length")
+            length = int(declared) if declared and declared.isdigit() else 0
+            if 0 < length <= MAX_BODY_BYTES:
+                self.rfile.read(length)
+
+        def _write(
+            self,
+            status: int,
+            payload: dict[str, Any],
+            *,
+            headers: Sequence[tuple[str, str]] = (),
+        ) -> None:
             encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode(
                 "utf-8"
             )
@@ -204,6 +269,8 @@ def make_handler(
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(encoded)))
             self.send_header("Cache-Control", "no-store")
+            for name, value in headers:
+                self.send_header(name, value)
             if allowed_origin is not None:
                 self.send_header("Access-Control-Allow-Origin", allowed_origin)
                 self.send_header("Vary", "Origin")
@@ -213,22 +280,50 @@ def make_handler(
     return Handler
 
 
+def api_server(
+    service: ProviderService,
+    *,
+    token: str,
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    allowed_origin: str | None = None,
+) -> ThreadingHTTPServer:
+    """Bind the service without serving it, so a caller can print its address."""
+
+    if host not in LOOPBACK_HOSTS:
+        raise ValueError("provider service is loopback-only by default")
+    return ThreadingHTTPServer(
+        (host, port),
+        make_handler(service, token=token, allowed_origin=allowed_origin),
+    )
+
+
 def serve(
     service: ProviderService,
     *,
+    token: str,
     host: str = "127.0.0.1",
     port: int = 8765,
     allowed_origin: str | None = None,
 ) -> None:
-    if host not in {"127.0.0.1", "::1", "localhost"}:
-        raise ValueError("provider service is loopback-only by default")
-    server = ThreadingHTTPServer(
-        (host, port), make_handler(service, allowed_origin=allowed_origin)
+    """Serve until interrupted. ``token`` is required: loopback is not a wall."""
+
+    server = api_server(
+        service, token=token, host=host, port=port, allowed_origin=allowed_origin
     )
     try:
         server.serve_forever()
     finally:
         server.server_close()
+
+
+def _presented_token(header: str | None) -> str | None:
+    if not header:
+        return None
+    scheme, _, value = header.partition(" ")
+    if scheme.lower() != BEARER_SCHEME.lower():
+        return None
+    return value.strip() or None
 
 
 def _best_probe_state(profiles: Sequence[CredentialProfile]) -> str | None:

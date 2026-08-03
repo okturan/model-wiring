@@ -37,6 +37,34 @@ not on an index yet, which is why the explicit paths are listed above.
 
 Import names are unchanged: `model_wiring` and `model_wiring_surfaces`.
 
+## Giving your app model access
+
+Start the gateway and point an existing provider SDK at it. Nothing else in
+your application changes — it keeps using the SDK it already knows, and the
+credential never reaches your process.
+
+```sh
+model-wiring gateway            # prints a base URL and a bearer token
+```
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url=GATEWAY_URL, api_key=GATEWAY_TOKEN)  # not a provider key
+```
+
+The gateway resolves a credential through the broker, attaches it on the way
+out, and streams the response back. It forwards exactly one request per call:
+no agent loop, no tool execution, no retry or fallback policy, and a provider's
+errors reach you unchanged. Request and response bodies are streamed rather
+than buffered, and are never logged or persisted — only profile, provider,
+status, byte counts, and duration are recorded.
+
+Because it can spend a subscription, the gateway binds loopback only and
+requires its bearer token on every request, checked before any credential is
+read. `model-wiring serve` now does the same — **a breaking change** for
+callers that previously reached it unauthenticated.
+
 ## Connecting a provider
 
 ```sh

@@ -18,6 +18,9 @@ from model_wiring.login import (
 from model_wiring.oauth import OAuthError
 from model_wiring.oauth_login import LoopbackRedirect
 
+# Both fixtures model a consuming application that registered its own OAuth
+# client, so their routes declare the posture that permits one; an undeclared
+# route offers delegated import only and never reaches these drivers.
 PKCE_PROVIDER = {
     "acme-cloud": {
         "name": "Acme Cloud",
@@ -30,6 +33,7 @@ PKCE_PROVIDER = {
                 "kind": "oauth",
                 "billing_kind": "subscription",
                 "label": "Acme subscription",
+                "terms_posture": "third_party_permitted",
                 "driver": "oauth_pkce",
                 "metadata": {
                     "oauth": {
@@ -54,6 +58,7 @@ DEVICE_PROVIDER = {
                 "kind": "oauth",
                 "billing_kind": "subscription",
                 "label": "Acme device sign-in",
+                "terms_posture": "third_party_permitted",
                 "driver": "oauth_device",
                 "metadata": {
                     "oauth": {

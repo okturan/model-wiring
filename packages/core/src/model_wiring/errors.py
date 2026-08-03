@@ -47,5 +47,13 @@ class SecretNotFound(CredentialError):
     """The referenced secret does not exist in its configured store."""
 
 
+class CredentialUnavailable(CredentialError):
+    """No rung of the precedence chain could supply a credential."""
+
+    def __init__(self, message: str, considered: tuple[str, ...] = ()) -> None:
+        super().__init__(message)
+        self.considered = considered
+
+
 class RefreshError(CredentialError):
     """An OAuth credential could not be refreshed."""

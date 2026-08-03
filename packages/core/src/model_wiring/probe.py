@@ -8,13 +8,21 @@ stored credential that has not been checked is ``unknown``, not ``ready``.
 from __future__ import annotations
 
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 from .auth import AuthBroker, CredentialLease
 from .contracts import CredentialProfile
+from .errors import CredentialError
+from .gateway import (
+    GatewayError,
+    GatewayRequest,
+    GatewayRoute,
+    InferenceGateway,
+    RouteNotFound,
+)
 
 JSON = dict[str, Any]
 
@@ -36,7 +44,8 @@ ProbeDriver = Callable[[CredentialLease], tuple[str, str | None, str | None]]
 # package ships no third-party endpoint it cannot verify against a first-party
 # source — the same rule the OAuth routes follow. Local evidence (expiry, a
 # missing secret, a vanished delegated sign-in) needs no driver; anything else
-# reports "unknown" until a consumer registers one here or passes `drivers=`.
+# reports "unknown" until a consumer registers one here, passes `drivers=`, or
+# declares a verification call in route data for `gateway_probe_drivers`.
 PROBE_DRIVERS: dict[str, ProbeDriver] = {}
 
 
@@ -199,6 +208,79 @@ class Prober:
         if result.account_fingerprint:
             metadata["account_fingerprint"] = result.account_fingerprint
         self.broker.profiles.upsert(replace(profile, metadata=metadata))
+
+
+def gateway_probe_driver(gateway: InferenceGateway, route: GatewayRoute) -> ProbeDriver:
+    """Verify a credential with the read-only call ``route`` declares.
+
+    The call leaves through the gateway's own egress path, so a "ready" here is
+    the same evidence an application would get. The profile under test is named
+    on the request, so the answer is about that credential rather than whichever
+    one the precedence chain would otherwise prefer.
+    """
+
+    if not route.probe_path:
+        raise ValueError(
+            f"gateway route {route.id} declares no verification call to probe with"
+        )
+    target = f"{route.prefix}{route.probe_path}"
+
+    def driver(lease: CredentialLease) -> tuple[str, str | None, str | None]:
+        request = GatewayRequest(
+            method=route.probe_method,
+            target=target,
+            token=gateway.token,
+            profile_id=lease.profile.id,
+        )
+        try:
+            record = gateway.forward(request, _DiscardedResponse())
+        except RouteNotFound as exc:
+            # The declaration is wrong, which is no evidence about the credential.
+            return "unknown", None, str(exc)
+        except (GatewayError, CredentialError) as exc:
+            return "unavailable", None, str(exc)
+        state, detail = _state_for_status(record.status)
+        return state, None, detail
+
+    return driver
+
+
+def gateway_probe_drivers(gateway: InferenceGateway) -> dict[str, ProbeDriver]:
+    """A driver per provider whose route declares a verification call."""
+
+    return {
+        route.provider_id: gateway_probe_driver(gateway, route)
+        for route in gateway.routes
+        if route.probe_path
+    }
+
+
+class _DiscardedResponse:
+    """Reads a provider's answer for its status and keeps none of its body."""
+
+    def begin(self, status: int, headers: Sequence[tuple[str, str]]) -> None:
+        del status, headers
+
+    def write(self, chunk: bytes) -> None:
+        del chunk
+
+    def finish(self) -> None:
+        return
+
+
+def _state_for_status(status: int) -> tuple[str, str | None]:
+    """Map one provider answer to the strongest claim it supports."""
+
+    if 200 <= status < 300:
+        return "ready", None
+    if status in (401, 407):
+        return "expired", f"the provider no longer accepts this credential ({status})"
+    if status == 403:
+        return "policy_denied", f"the provider denied this credential access ({status})"
+    if status >= 500:
+        return "unavailable", f"the provider is not answering ({status})"
+    # A rate limit, a bad path, or a rejected body says nothing about identity.
+    return "unknown", f"the provider answered {status}"
 
 
 def _account_fingerprint(profile: CredentialProfile) -> str | None:

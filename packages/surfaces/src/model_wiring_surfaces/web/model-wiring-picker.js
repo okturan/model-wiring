@@ -3,6 +3,10 @@ const stylesheet = new URL("./model-wiring-picker.css", import.meta.url).href;
 // A credential that was checked and failed is not a usable credential.
 const FAILED_PROBE_STATES = new Set(["expired", "unavailable", "policy_denied"]);
 
+// Least permitting first: a provider only reads as permitting third-party
+// clients when every route that needs a credential says so.
+const POSTURE_ORDER = ["first_party_only", "unverified", "third_party_permitted"];
+
 class ModelWiringPicker extends HTMLElement {
   constructor() {
     super();
@@ -35,6 +39,17 @@ class ModelWiringPicker extends HTMLElement {
   set endpoint(value) {
     if (value == null) this.removeAttribute("endpoint");
     else this.setAttribute("endpoint", String(value));
+  }
+
+  // The loopback service prints a bearer token when it starts and refuses every
+  // request without it; the page that knows the token hands it to the picker.
+  get token() {
+    return this.getAttribute("token") || "";
+  }
+
+  set token(value) {
+    if (value == null) this.removeAttribute("token");
+    else this.setAttribute("token", String(value));
   }
 
   get supportedProviders() {
@@ -174,11 +189,13 @@ class ModelWiringPicker extends HTMLElement {
       (profile) => profile.provider_id === provider.id && profile.enabled,
     );
     const probeState = this.probeState(provider, profiles);
+    const terms = this.termsPosture(provider);
     if (FAILED_PROBE_STATES.has(probeState)) {
       // Checked and failed is not the same as configured.
       return {
         state: "connect",
         label: `Connect · credential ${probeState.replace("_", " ")}`,
+        terms,
       };
     }
     const credentialState = this.credentialState(provider, profiles);
@@ -187,9 +204,17 @@ class ModelWiringPicker extends HTMLElement {
         state: "connect",
         label: `Connect · ${this.authLabel(routes[0].kind)}`,
         requires: this.requiredVariables(provider),
+        terms,
       };
     }
-    return { state: "ready", label: "Ready now" };
+    return { state: "ready", label: "Ready now", terms };
+  }
+
+  termsPosture(provider) {
+    const declared = this.accessRoutes(provider)
+      .filter((route) => route.needs_credential ?? route.kind !== "anonymous")
+      .map((route) => route.terms_posture || "unverified");
+    return POSTURE_ORDER.find((posture) => declared.includes(posture)) || null;
   }
 
   accessRoutes(provider) {
@@ -440,9 +465,11 @@ class ModelWiringPicker extends HTMLElement {
       count.textContent = `${provider.model_count} models`;
       const state = document.createElement("small");
       const requires = provider.surfaceState.requires || [];
-      state.textContent = requires.length
-        ? `${provider.surfaceState.label} · needs ${requires.join(", ")}`
-        : provider.surfaceState.label;
+      const facts = [provider.surfaceState.label];
+      if (requires.length) facts.push(`needs ${requires.join(", ")}`);
+      const terms = this.termsLabel(provider.surfaceState.terms);
+      if (terms) facts.push(terms);
+      state.textContent = facts.join(" · ");
       button.append(name, count, state);
       button.addEventListener("click", () => this.activateProvider(provider));
       collection.append(button);
@@ -575,6 +602,16 @@ class ModelWiringPicker extends HTMLElement {
     })[value] || String(value || "Not selected").replaceAll("_", " ");
   }
 
+  termsLabel(value) {
+    // A route that verified nothing offers exactly what a first-party-only
+    // one offers, so both say the same thing to the person signing in.
+    return ({
+      first_party_only: "Existing provider sign-in only",
+      third_party_permitted: "Third-party sign-in permitted",
+      unverified: "Terms unverified, existing provider sign-in only",
+    })[value] || "";
+  }
+
   billingLabel(value) {
     return ({
       subscription: "Subscription access",
@@ -607,7 +644,9 @@ class ModelWiringPicker extends HTMLElement {
   }
 
   async request(path, options = {}) {
-    const response = await fetch(`${this.endpoint}${path}`, options);
+    const headers = { ...(options.headers || {}) };
+    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    const response = await fetch(`${this.endpoint}${path}`, { ...options, headers });
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload.error?.message || `Request failed (${response.status})`);

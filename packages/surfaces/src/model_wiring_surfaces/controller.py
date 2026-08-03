@@ -33,6 +33,7 @@ class ProviderView:
     access_routes: tuple[AccessRoute, ...]
     required_variables: tuple[str, ...]
     credential_state: str
+    terms_posture: str | None
     probe_state: str | None
     entitlement_class: str | None
     profile_count: int
@@ -54,6 +55,7 @@ class ProviderView:
             "access_routes": [route.to_dict() for route in self.access_routes],
             "required_variables": list(self.required_variables),
             "credential_state": self.credential_state,
+            "terms_posture": self.terms_posture,
             "probe_state": self.probe_state,
             "entitlement_class": self.entitlement_class,
             "profile_count": self.profile_count,
@@ -95,6 +97,7 @@ class ModelPreview:
     route_support_reason: str | None
     credential_state: str = "configured"
     required_variables: tuple[str, ...] = ()
+    terms_posture: str | None = None
     probe_state: str | None = None
 
     @property
@@ -118,6 +121,7 @@ class ModelPreview:
             "route_support_reason": self.route_support_reason,
             "credential_state": self.credential_state,
             "required_variables": list(self.required_variables),
+            "terms_posture": self.terms_posture,
             "probe_state": self.probe_state,
             "usable_now": self.usable_now,
         }
@@ -671,6 +675,7 @@ class SelectionController:
             access_routes=access.routes,
             required_variables=access.required_variables,
             credential_state=access.credential_state,
+            terms_posture=_terms_posture(access.routes),
             probe_state=_last_probe_state(profiles),
             entitlement_class=_entitlement_class(profiles),
             profile_count=len(profiles),
@@ -760,6 +765,7 @@ class SelectionController:
             route_support_reason=self._support_reason(model),
             credential_state=credential_state,
             required_variables=access.required_variables,
+            terms_posture=_terms_posture(access.routes),
             probe_state=probe_state,
         )
 
@@ -874,6 +880,18 @@ def _connect_reason(access: ProviderAccess) -> str:
     if labels:
         return f"Needs access via {' or '.join(labels).lower()}."
     return "Authentication is required."
+
+
+# Least permitting first: a provider only reads as permitting third-party
+# clients when every route that needs a credential says so.
+POSTURE_ORDER = ("first_party_only", "unverified", "third_party_permitted")
+
+
+def _terms_posture(routes: Sequence[AccessRoute]) -> str | None:
+    """The posture a person must see before signing in, or none to see."""
+
+    declared = {route.terms_posture for route in routes if route.needs_credential}
+    return next((posture for posture in POSTURE_ORDER if posture in declared), None)
 
 
 # A credential that has been probed and failed must not read as usable.

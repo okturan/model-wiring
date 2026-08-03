@@ -10,16 +10,18 @@ from pathlib import Path
 from typing import Any
 
 from .access import provider_access
-from .api import ProviderService, serve
+from .api import ProviderService, api_server, issue_token
 from .auth import AuthBroker, KeyringSecretStore, MemorySecretStore
+from .broker import CredentialBroker
 from .catalog import Catalog, ModelsDevSource, load_overlay
 from .contracts import CredentialProfile, SelectionIntent
 from .discovery import discover_environment_profiles
 from .errors import AmbiguousSelection, CredentialError, ModelProviderError
+from .gateway import InferenceGateway, gateway_routes, gateway_server
 from .login import DELEGATED_CANDIDATES, LoginBroker, LoginResult
 from .pool import POOL_STRATEGIES, CredentialPool
 from .popularity import provider_popularity_key
-from .probe import PROBE_DRIVERS, Prober
+from .probe import PROBE_DRIVERS, Prober, gateway_probe_drivers
 from .profiles import ProfileRegistry
 from .selection import Selector
 
@@ -196,7 +198,9 @@ def build_parser() -> argparse.ArgumentParser:
     _json_flag(logout)
 
     server = commands.add_parser(
-        "serve", help="serve the secret-free loopback JSON API"
+        "serve",
+        help="serve the secret-free loopback JSON API; prints the bearer token "
+        "every request must carry",
     )
     server.add_argument("--host", default="127.0.0.1")
     server.add_argument("--port", type=int, default=8765)
@@ -204,6 +208,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-origin",
         help="exact browser origin allowed to call the loopback API",
     )
+    _json_flag(server)
+
+    gateway = commands.add_parser(
+        "gateway",
+        help="serve provider-shaped routes that inject credentials at egress",
+    )
+    gateway.add_argument("--host", default="127.0.0.1")
+    gateway.add_argument("--port", type=int, default=8766)
+    gateway.add_argument(
+        "--provider",
+        action="append",
+        default=[],
+        help="expose only this provider; repeat for several",
+    )
+    gateway.add_argument("--store", help="secret store name (default: keyring)")
+    _json_flag(gateway)
     return parser
 
 
@@ -255,13 +275,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command in {"login", "logout"}:
             return _login_command(args, catalog, profiles)
         if args.command == "serve":
-            serve(
-                ProviderService(catalog, profiles),
-                host=args.host,
-                port=args.port,
-                allowed_origin=args.allow_origin,
-            )
-            return 0
+            return _serve_command(args, catalog, profiles)
+        if args.command == "gateway":
+            return _gateway_command(args, catalog, profiles)
         parser.error("unhandled command")
     except AmbiguousSelection as exc:
         _emit_error(exc, extra={"candidates": list(exc.candidates)})
@@ -416,9 +432,15 @@ def _access_command(
     stored = tuple(profiles.list())
     if args.access_command == "probe":
         store_name = getattr(args, "store", None) or "keyring"
+        auth = AuthBroker(profiles, stores=_secret_stores(store_name))
+        # The gateway is the egress path, not a listener: nothing is bound here.
+        # A provider whose route declares a verification call is checked with a
+        # real authenticated request; every other provider stays unverified.
+        gateway = InferenceGateway(
+            CredentialBroker(auth, catalog=catalog), gateway_routes(catalog)
+        )
         prober = Prober(
-            AuthBroker(profiles, stores=_secret_stores(store_name)),
-            drivers=PROBE_DRIVERS,
+            auth, drivers={**PROBE_DRIVERS, **gateway_probe_drivers(gateway)}
         )
         record = not args.no_record
         results = (
@@ -514,6 +536,78 @@ def _parse_assignment(value: str) -> tuple[str, str]:
     if not separator or not name.strip():
         raise ValueError(f"expected NAME=VALUE, got {value!r}")
     return name.strip(), secret
+
+
+def _serve_command(
+    args: argparse.Namespace, catalog: Catalog, profiles: ProfileRegistry
+) -> int:
+    """Bind, print the token once, then serve until interrupted."""
+
+    token = issue_token()
+    server = api_server(
+        ProviderService(catalog, profiles),
+        token=token,
+        host=args.host,
+        port=args.port,
+        allowed_origin=args.allow_origin,
+    )
+    try:
+        _emit(
+            {"base_url": _base_url(args.host, server.server_address), "token": token},
+            json_output=args.json,
+        )
+        server.serve_forever()
+    finally:
+        server.server_close()
+    return 0
+
+
+def _gateway_command(
+    args: argparse.Namespace, catalog: Catalog, profiles: ProfileRegistry
+) -> int:
+    """Serve the routes the catalogue declares, with credentials injected."""
+
+    store_name = args.store or "keyring"
+    broker = CredentialBroker(
+        AuthBroker(profiles, stores=_secret_stores(store_name)), catalog=catalog
+    )
+    gateway = InferenceGateway(
+        broker, gateway_routes(catalog, provider_ids=args.provider or None)
+    )
+    server = gateway_server(gateway, host=args.host, port=args.port)
+    try:
+        base_url = _base_url(args.host, server.server_address)
+        payload = {
+            "base_url": base_url,
+            "token": gateway.token,
+            "routes": [
+                {
+                    "provider_id": route.provider_id,
+                    "route_id": route.id,
+                    "url": f"{base_url}{route.prefix}",
+                    "methods": list(route.methods),
+                    "paths": list(route.paths),
+                }
+                for route in gateway.routes
+            ],
+        }
+        _emit(payload, json_output=args.json)
+        if not args.json:
+            for route in payload["routes"]:
+                print(
+                    f"route {route['provider_id']} {route['route_id']}: {route['url']}"
+                )
+        server.serve_forever()
+    finally:
+        server.server_close()
+    return 0
+
+
+def _base_url(host: str, address: tuple[Any, ...]) -> str:
+    """The address a client should point at, with the port actually bound."""
+
+    port = int(address[1])
+    return f"http://[{host}]:{port}" if ":" in host else f"http://{host}:{port}"
 
 
 def _profiles_for(

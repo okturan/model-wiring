@@ -20,6 +20,13 @@ JSON = dict[str, Any]
 # catalogued; everything else needs a profile before an application may run it.
 CREDENTIAL_FREE_KINDS = frozenset({"anonymous"})
 
+# Whether a third-party client may use this provider's subscription credential.
+# Providers differ, so this is per-route data an overlay declares, never a
+# global stance. ``unverified`` is what a route that decides nothing gets, and
+# it is treated exactly as ``first_party_only`` wherever posture is honoured.
+TERMS_POSTURES = frozenset({"first_party_only", "third_party_permitted", "unverified"})
+DEFAULT_TERMS_POSTURE = "unverified"
+
 _DEFAULT_LABELS = {
     "api_key": "API key",
     "bearer": "Bearer token",
@@ -38,6 +45,7 @@ class AccessRoute:
     kind: str
     billing_kind: str
     label: str
+    terms_posture: str = DEFAULT_TERMS_POSTURE
     env: tuple[str, ...] = ()
     doc_url: str | None = None
     driver: str | None = None
@@ -49,6 +57,8 @@ class AccessRoute:
             raise ValueError(f"unsupported auth kind: {self.kind}")
         if self.billing_kind not in BILLING_KINDS:
             raise ValueError(f"unsupported billing kind: {self.billing_kind}")
+        if self.terms_posture not in TERMS_POSTURES:
+            raise ValueError(f"unsupported terms posture: {self.terms_posture}")
 
     @property
     def needs_credential(self) -> bool:
@@ -60,6 +70,7 @@ class AccessRoute:
             "kind": self.kind,
             "billing_kind": self.billing_kind,
             "label": self.label,
+            "terms_posture": self.terms_posture,
             "env": list(self.env),
             "doc_url": self.doc_url,
             "driver": self.driver,
@@ -76,6 +87,7 @@ class AccessRoute:
             kind=kind,
             billing_kind=str(value.get("billing_kind") or "unknown"),
             label=str(value.get("label") or _DEFAULT_LABELS.get(kind) or kind),
+            terms_posture=_posture(value.get("terms_posture")),
             env=tuple(str(item) for item in value.get("env", ()) if item),
             doc_url=_optional(value.get("doc_url")),
             driver=_optional(value.get("driver")),
@@ -168,6 +180,7 @@ def _derived_routes(provider: ProviderSpec) -> tuple[AccessRoute, ...]:
                 kind=method.kind,
                 billing_kind=billing,
                 label=method.label or _DEFAULT_LABELS.get(method.kind, method.kind),
+                terms_posture=_posture(method.metadata.get("terms_posture")),
                 env=method.env,
                 doc_url=provider.doc_url,
                 driver=_default_driver(method.kind),
@@ -195,6 +208,13 @@ def _default_driver(kind: str) -> str | None:
         "oauth": "oauth_pkce",
         "delegated": "delegated_import",
     }.get(kind)
+
+
+def _posture(value: Any) -> str:
+    """Absent data is a decision nobody made, so it yields the safe posture."""
+
+    text = str(value).strip() if value is not None else ""
+    return text or DEFAULT_TERMS_POSTURE
 
 
 def _optional(value: Any) -> str | None:
