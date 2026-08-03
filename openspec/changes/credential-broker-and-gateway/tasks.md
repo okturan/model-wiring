@@ -46,4 +46,4 @@
 - [x] 6.1 Run both suites, Ruff check and format, compileall, `node --check`, and the workspace lock check
 - [x] 6.2 Re-verify the Atlas integration: 137 tests, `atlas/build.py`, UI tests and production build
 - [x] 6.3 Update README with the gateway integration story and the breaking `serve` change
-- [ ] 6.4 Confirm CI passes on both Linux and Windows
+- [x] 6.4 Confirm CI passes on both Linux and Windows
