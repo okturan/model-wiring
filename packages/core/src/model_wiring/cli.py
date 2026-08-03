@@ -11,7 +11,7 @@ from typing import Any
 
 from .access import provider_access
 from .api import ProviderService, serve
-from .auth import KeyringSecretStore, MemorySecretStore
+from .auth import AuthBroker, KeyringSecretStore, MemorySecretStore
 from .catalog import Catalog, ModelsDevSource, load_overlay
 from .contracts import CredentialProfile, SelectionIntent
 from .discovery import discover_environment_profiles
@@ -19,6 +19,7 @@ from .errors import AmbiguousSelection, CredentialError, ModelProviderError
 from .login import DELEGATED_CANDIDATES, LoginBroker, LoginResult
 from .pool import POOL_STRATEGIES, CredentialPool
 from .popularity import provider_popularity_key
+from .probe import PROBE_DRIVERS, Prober
 from .profiles import ProfileRegistry
 from .selection import Selector
 
@@ -147,6 +148,19 @@ def build_parser() -> argparse.ArgumentParser:
         "status", help="credentials that are already configured"
     )
     _json_flag(access_status)
+    access_probe = access_commands.add_parser(
+        "probe", help="check whether stored credentials still work"
+    )
+    access_probe.add_argument(
+        "profile", nargs="?", help="probe one profile instead of every profile"
+    )
+    access_probe.add_argument(
+        "--no-record",
+        action="store_true",
+        help="do not write the outcome back to the profile",
+    )
+    access_probe.add_argument("--store", help="secret store name (default: keyring)")
+    _json_flag(access_probe)
 
     login = commands.add_parser("login", help="connect a provider")
     login.add_argument("provider")
@@ -400,6 +414,23 @@ def _access_command(
     args: argparse.Namespace, catalog: Catalog, profiles: ProfileRegistry
 ) -> int:
     stored = tuple(profiles.list())
+    if args.access_command == "probe":
+        store_name = getattr(args, "store", None) or "keyring"
+        prober = Prober(
+            AuthBroker(profiles, stores=_secret_stores(store_name)),
+            drivers=PROBE_DRIVERS,
+        )
+        record = not args.no_record
+        results = (
+            [prober.probe(args.profile, record=record)]
+            if args.profile
+            else list(prober.probe_all(record=record))
+        )
+        _emit(
+            {"items": [result.to_dict() for result in results]},
+            json_output=args.json,
+        )
+        return 0 if all(item.state != "unavailable" for item in results) else 1
     if args.access_command == "status":
         _emit(
             {"items": [profile.to_dict() for profile in stored]},

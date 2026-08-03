@@ -370,13 +370,11 @@ def _preview_rows(view: SelectionView, width: int) -> list[str]:
         f"availability  {availability}",
     ]
     if preview.route_supported and not preview.usable_now:
-        result.append(
-            _truncate(
-                "needs         "
-                + (", ".join(preview.required_variables) or "a stored credential"),
-                width,
-            )
-        )
+        if preview.probe_state in {"expired", "unavailable", "policy_denied"}:
+            needs = f"the stored credential is {preview.probe_state.replace('_', ' ')}"
+        else:
+            needs = ", ".join(preview.required_variables) or "a stored credential"
+        result.append(_truncate("needs         " + needs, width))
     modes: list[str] = []
     if preview.variants:
         modes.append("variant " + "/".join(preview.variants))

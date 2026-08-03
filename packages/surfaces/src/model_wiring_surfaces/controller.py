@@ -33,6 +33,8 @@ class ProviderView:
     access_routes: tuple[AccessRoute, ...]
     required_variables: tuple[str, ...]
     credential_state: str
+    probe_state: str | None
+    entitlement_class: str | None
     profile_count: int
     state: str
     state_label: str
@@ -52,6 +54,8 @@ class ProviderView:
             "access_routes": [route.to_dict() for route in self.access_routes],
             "required_variables": list(self.required_variables),
             "credential_state": self.credential_state,
+            "probe_state": self.probe_state,
+            "entitlement_class": self.entitlement_class,
             "profile_count": self.profile_count,
             "state": self.state,
             "state_label": self.state_label,
@@ -91,6 +95,7 @@ class ModelPreview:
     route_support_reason: str | None
     credential_state: str = "configured"
     required_variables: tuple[str, ...] = ()
+    probe_state: str | None = None
 
     @property
     def usable_now(self) -> bool:
@@ -113,6 +118,7 @@ class ModelPreview:
             "route_support_reason": self.route_support_reason,
             "credential_state": self.credential_state,
             "required_variables": list(self.required_variables),
+            "probe_state": self.probe_state,
             "usable_now": self.usable_now,
         }
 
@@ -665,6 +671,8 @@ class SelectionController:
             access_routes=access.routes,
             required_variables=access.required_variables,
             credential_state=access.credential_state,
+            probe_state=_last_probe_state(profiles),
+            entitlement_class=_entitlement_class(profiles),
             profile_count=len(profiles),
             state=state,
             state_label={
@@ -704,6 +712,10 @@ class SelectionController:
                 reasons[0] if reasons else "No models are catalogued for this provider."
             )
             return "catalog", supported, profiles, reason
+        probe_state = _last_probe_state(profiles)
+        if probe_state in FAILED_PROBE_STATES:
+            # A credential that was checked and failed is not a credential.
+            return "connect", supported, profiles, PROBE_REASONS[probe_state]
         access = provider_access(provider, profiles)
         if access.credential_state == "unavailable":
             return (
@@ -722,7 +734,16 @@ class SelectionController:
 
     def _preview(self, model: ModelSpec) -> ModelPreview:
         provider = self.catalog.provider(model.provider_id)
-        access = provider_access(provider, self._profiles_for(model.provider_id))
+        profiles = self._profiles_for(model.provider_id)
+        access = provider_access(provider, profiles)
+        probe_state = _last_probe_state(profiles)
+        # A profile that exists but failed its probe is not a usable credential,
+        # so the preview must not present the model as ready.
+        credential_state = (
+            "connectable"
+            if probe_state in FAILED_PROBE_STATES
+            else access.credential_state
+        )
         return ModelPreview(
             id=model.qualified_id,
             provider=model.provider_id,
@@ -737,8 +758,9 @@ class SelectionController:
             tiers=self._tiers(model),
             route_supported=self._support_reason(model) is None,
             route_support_reason=self._support_reason(model),
-            credential_state=access.credential_state,
+            credential_state=credential_state,
             required_variables=access.required_variables,
+            probe_state=probe_state,
         )
 
     def _clear_selection(self) -> None:
@@ -852,3 +874,37 @@ def _connect_reason(access: ProviderAccess) -> str:
     if labels:
         return f"Needs access via {' or '.join(labels).lower()}."
     return "Authentication is required."
+
+
+# A credential that has been probed and failed must not read as usable.
+FAILED_PROBE_STATES = frozenset({"expired", "unavailable", "policy_denied"})
+
+PROBE_REASONS = {
+    "expired": "The stored credential has expired; sign in again.",
+    "policy_denied": "The account is authenticated but access was denied.",
+    "unavailable": "The stored credential could not be used.",
+}
+
+
+def _last_probe_state(profiles: Sequence[CredentialProfile]) -> str | None:
+    states = [
+        str(profile.metadata["last_probe_state"])
+        for profile in profiles
+        if profile.metadata.get("last_probe_state")
+    ]
+    if not states:
+        return None
+    # Report the best outcome any profile achieved; one dead key among several
+    # working ones does not make the provider unusable.
+    for preferred in ("ready", "unknown", "expired", "policy_denied", "unavailable"):
+        if preferred in states:
+            return preferred
+    return states[0]
+
+
+def _entitlement_class(profiles: Sequence[CredentialProfile]) -> str | None:
+    for profile in profiles:
+        value = profile.metadata.get("entitlement_class")
+        if value:
+            return str(value)
+    return None

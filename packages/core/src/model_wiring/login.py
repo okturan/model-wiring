@@ -319,7 +319,14 @@ class DelegatedImportDriver:
                 metadata={
                     "delegate": chosen,
                     "imported_from": str(candidate.get("label") or chosen),
-                    "refresh_owner": "sdk",
+                    "refresh_owner": str(candidate.get("refresh_owner") or "sdk"),
+                    # Recorded so a probe can tell whether the owning tool is
+                    # still signed in without reading the artifact's contents.
+                    **(
+                        {"delegate_path": str(candidate["path"])}
+                        if candidate.get("path")
+                        else {}
+                    ),
                 },
             )
         )

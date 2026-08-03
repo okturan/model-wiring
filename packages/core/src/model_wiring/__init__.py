@@ -57,6 +57,7 @@ from .popularity import (
     provider_popularity_key,
     provider_popularity_rank,
 )
+from .probe import Prober, ProbeResult, entitlement_for
 from .profiles import ProfileRegistry
 from .selection import Selector
 
@@ -93,6 +94,8 @@ __all__ = [
     "OAuthPkceDriver",
     "OAuthProviderConfig",
     "OpenUrlPrompt",
+    "ProbeResult",
+    "Prober",
     "ProfileRegistry",
     "ProviderAccess",
     "ProviderSpec",
@@ -104,6 +107,7 @@ __all__ = [
     "Selector",
     "UserCodePrompt",
     "discover_environment_profiles",
+    "entitlement_for",
     "load_overlay",
     "provider_access",
     "provider_access_routes",

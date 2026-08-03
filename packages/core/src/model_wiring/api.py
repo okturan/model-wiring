@@ -102,6 +102,15 @@ class ProviderService:
         payload["access_routes"] = [route.to_dict() for route in access.routes]
         payload["required_variables"] = list(access.required_variables)
         payload["credential_state"] = access.credential_state
+        payload["probe_state"] = _best_probe_state(access.profiles)
+        payload["entitlement_class"] = next(
+            (
+                str(profile.metadata["entitlement_class"])
+                for profile in access.profiles
+                if profile.metadata.get("entitlement_class")
+            ),
+            None,
+        )
         return payload
 
     def post(self, path: str, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
@@ -220,3 +229,17 @@ def serve(
         server.serve_forever()
     finally:
         server.server_close()
+
+
+def _best_probe_state(profiles: Sequence[CredentialProfile]) -> str | None:
+    """Report the best outcome any profile achieved, or None if unprobed."""
+
+    states = {
+        str(profile.metadata["last_probe_state"])
+        for profile in profiles
+        if profile.metadata.get("last_probe_state")
+    }
+    for preferred in ("ready", "unknown", "expired", "policy_denied", "unavailable"):
+        if preferred in states:
+            return preferred
+    return None

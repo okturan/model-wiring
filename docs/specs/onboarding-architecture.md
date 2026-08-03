@@ -191,7 +191,24 @@ spec and surfaced to the user rather than hidden.
 | M1 Route visibility | Every provider shows its real connect routes in CLI/TUI/web | R1, R7 (display) |
 | M2 Keys and imports | API-key paste, env promotion, delegated imports working end to end | R2 (paste/import), R4 |
 | M3 Subscription OAuth | Browser (PKCE) and device sign-in drivers, loopback redirect | R2, R3, R8 |
-| M4 Trust | Probes, entitlement labels, account fingerprints in all surfaces | R5, R6 |
+| M4 Trust (implemented) | Probes, entitlement labels, account fingerprints in all surfaces | R5, R6 |
+
+`Prober.probe()` reports the strongest claim the evidence supports. Local
+evidence needs no provider call: a disabled profile, a missing secret, a token
+past its expiry, and a delegated sign-in whose artifact is gone are all decided
+offline. Expiry is read straight from the secret store rather than through a
+lease, because leasing would attempt a refresh — which both hides the expiry
+and makes a read-only check mutate state.
+
+A stored credential that cannot be checked reports `unknown`, never `ready`.
+`PROBE_DRIVERS` ships empty for the same reason the OAuth routes ship no
+endpoints: a driver has to call a provider's own API, and this package ships
+none it cannot verify. Consumers register drivers for the providers they use.
+
+Outcomes are written back as non-secret profile metadata (`last_probe_state`,
+`last_probe_at`, `entitlement_class`, `account_fingerprint`), which is what
+lets every surface downgrade a provider that was configured but has since
+stopped working.
 | M5 Concurrency (deferred) | Single-writer broker daemon / gateway à la OMP, if multi-client demand appears | — |
 
 M1 alone resolves the original complaint: no provider should ever present as

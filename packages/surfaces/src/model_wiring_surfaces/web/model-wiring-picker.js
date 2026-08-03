@@ -1,5 +1,8 @@
 const stylesheet = new URL("./model-wiring-picker.css", import.meta.url).href;
 
+// A credential that was checked and failed is not a usable credential.
+const FAILED_PROBE_STATES = new Set(["expired", "unavailable", "policy_denied"]);
+
 class ModelWiringPicker extends HTMLElement {
   constructor() {
     super();
@@ -170,6 +173,14 @@ class ModelWiringPicker extends HTMLElement {
     const profiles = this.state.profiles.filter(
       (profile) => profile.provider_id === provider.id && profile.enabled,
     );
+    const probeState = this.probeState(provider, profiles);
+    if (FAILED_PROBE_STATES.has(probeState)) {
+      // Checked and failed is not the same as configured.
+      return {
+        state: "connect",
+        label: `Connect · credential ${probeState.replace("_", " ")}`,
+      };
+    }
     const credentialState = this.credentialState(provider, profiles);
     if (credentialState === "connectable") {
       return {
@@ -195,6 +206,18 @@ class ModelWiringPicker extends HTMLElement {
   requiredVariables(provider) {
     if (Array.isArray(provider.required_variables)) return provider.required_variables;
     return [...new Set(this.accessRoutes(provider).flatMap((route) => route.env || []))];
+  }
+
+  probeState(provider, profiles) {
+    if (provider.probe_state) return provider.probe_state;
+    // Best outcome any profile achieved: one dead key among working ones
+    // does not make the provider unusable.
+    const states = profiles
+      .map((profile) => profile.metadata?.last_probe_state)
+      .filter(Boolean);
+    return ["ready", "unknown", "expired", "policy_denied", "unavailable"].find(
+      (candidate) => states.includes(candidate),
+    );
   }
 
   credentialState(provider, profiles) {
