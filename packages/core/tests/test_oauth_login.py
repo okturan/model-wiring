@@ -15,6 +15,7 @@ from model_wiring.login import (
     OpenUrlPrompt,
     UserCodePrompt,
 )
+from model_wiring.oauth import OAuthError
 from model_wiring.oauth_login import LoopbackRedirect
 
 PKCE_PROVIDER = {
@@ -160,7 +161,7 @@ class AuthorizationCodeLoginTests(unittest.TestCase):
         login, registry, _ = broker_for(PKCE_PROVIDER, transport)
         session = login.begin("acme-cloud", route_id="subscription")
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(OAuthError):
             login.advance(session, {"code": "auth-code", "state": "forged"})
 
         self.assertEqual([], transport.calls)

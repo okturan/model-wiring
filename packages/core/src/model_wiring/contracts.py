@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 JSON = dict[str, Any]
@@ -20,7 +20,7 @@ BILLING_KINDS = frozenset({"api", "subscription", "marketplace", "local", "unkno
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _json_copy(value: Any) -> Any:

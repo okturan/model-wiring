@@ -7,7 +7,7 @@ import os
 import tempfile
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
 from hashlib import sha256
 from importlib.resources import files
@@ -118,7 +118,7 @@ class ModelsDevSource:
             raise CatalogError(f"catalog cache digest mismatch at {self.cache_path}")
         if max_age is not None:
             fetched = datetime.fromisoformat(fetched_at.replace("Z", "+00:00"))
-            if datetime.now(timezone.utc) - fetched > max_age:
+            if datetime.now(UTC) - fetched > max_age:
                 raise CatalogUnavailable(f"catalog cache at {self.cache_path} is stale")
         return raw, fetched_at
 

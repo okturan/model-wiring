@@ -12,7 +12,7 @@ import threading
 import time
 from collections.abc import Mapping
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any
+from typing import Any, Self
 from urllib.parse import parse_qs, urlparse
 
 from .access import AccessRoute
@@ -103,7 +103,7 @@ class LoopbackRedirect:
         self._server.shutdown()
         self._server.server_close()
 
-    def __enter__(self) -> LoopbackRedirect:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:
@@ -115,11 +115,8 @@ def route_oauth_config(
 ) -> OAuthProviderConfig:
     """Build a provider config from the non-secret data an overlay supplies."""
 
-    declared = route.metadata.get("oauth")
-    if not isinstance(declared, Mapping):
-        raise ValueError(
-            f"access route {route.id!r} declares no metadata.oauth configuration"
-        )
+    raw = route.metadata.get("oauth")
+    declared: Mapping[str, Any] = raw if isinstance(raw, Mapping) else {}
     missing = [
         field
         for field in ("client_id", "authorization_endpoint", "token_endpoint")

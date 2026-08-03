@@ -21,8 +21,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cache", type=Path)
     parser.add_argument("--profiles", type=Path)
     parser.add_argument("--overlay", action="append", default=[], type=Path)
-    commands = parser.add_subparsers(dest="command", required=True)
-    pick = commands.add_parser("pick", help="interactive ANSI selector")
+    parser.add_argument("--no-color", action="store_true", help=argparse.SUPPRESS)
+    commands = parser.add_subparsers(dest="command")
+    pick = commands.add_parser("pick", help="interactive ANSI selector (default)")
     pick.add_argument("--query", default="")
     pick.add_argument("--no-color", action="store_true")
     render = commands.add_parser("render", help="render one non-interactive screen")
@@ -33,6 +34,10 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--no-color", action="store_true")
     assets = commands.add_parser("web-assets", help="copy the Web Component assets")
     assets.add_argument("--output", type=Path, required=True)
+    # Set after add_subparsers, which otherwise defaults `command` to None.
+    # Opening the picker is the common case, so the bare command must work
+    # without knowing a subcommand name.
+    parser.set_defaults(command="pick", query="")
     return parser
 
 
