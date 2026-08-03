@@ -8,6 +8,8 @@ without changing this module.
 
 from __future__ import annotations
 
+import os
+import socket
 import threading
 import time
 from collections.abc import Mapping
@@ -41,6 +43,30 @@ CLOSE_PAGE = (
     b"<!doctype html><meta charset=utf-8><title>Sign-in complete</title>"
     b"<p>You can close this tab and return to your terminal.</p>"
 )
+
+
+class _CallbackServer(ThreadingHTTPServer):
+    """A listener no other process on this machine can bind alongside.
+
+    The callback query carries the authorization code, so sharing the port
+    would mean handing that code to whoever else is listening. POSIX refuses a
+    second bind to a live socket even under ``SO_REUSEADDR``; Windows allows
+    it, and spells exclusive binding ``SO_EXCLUSIVEADDRUSE`` instead. Reuse
+    stays on elsewhere because a pinned port is otherwise unbindable while the
+    previous sign-in's socket sits in ``TIME_WAIT``.
+    """
+
+    _WINDOWS = os.name == "nt"
+    allow_reuse_address = not _WINDOWS
+
+    def server_bind(self) -> None:
+        if self._WINDOWS:
+            self.socket.setsockopt(
+                socket.SOL_SOCKET,
+                socket.SO_EXCLUSIVEADDRUSE,  # type: ignore[attr-defined]
+                1,
+            )
+        super().server_bind()
 
 
 class LoopbackRedirect:
@@ -80,7 +106,7 @@ class LoopbackRedirect:
             def log_message(self, *args: object) -> None:
                 """Silence the default logger; the query carries a secret."""
 
-        self._server = ThreadingHTTPServer((host, port), Handler)
+        self._server = _CallbackServer((host, port), Handler)
         # shutdown() blocks for one poll interval; the stdlib default of 0.5s
         # is a visible pause between approving in the browser and continuing.
         self._thread = threading.Thread(
