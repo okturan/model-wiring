@@ -75,6 +75,31 @@ class AccessRouteTests(unittest.TestCase):
 
         self.assertIsNotNone(provider_access_routes(provider)[0].doc_url)
 
+    def test_an_auth_method_may_carry_the_instructions_a_derived_route_shows(
+        self,
+    ) -> None:
+        catalog = fixture_catalog(
+            overlays=(
+                {
+                    "providers": {
+                        "openai": {
+                            "auth_methods": [
+                                {
+                                    "kind": "delegated",
+                                    "billing_kinds": ["subscription"],
+                                    "instructions": "Reuses an existing sign-in.",
+                                }
+                            ]
+                        }
+                    }
+                },
+            )
+        )
+
+        route = provider_access_routes(catalog.provider("openai"))[0]
+
+        self.assertEqual("Reuses an existing sign-in.", route.instructions)
+
     def test_routes_are_serializable_without_secrets(self) -> None:
         route = provider_access_routes(fixture_catalog().provider("openai"))[0]
 

@@ -65,7 +65,9 @@ def broker_for(raw: dict, transport=None) -> LoginBroker:
 
 class TermsPostureDeclarationTests(unittest.TestCase):
     def test_a_derived_route_that_declares_nothing_reports_unverified(self) -> None:
-        route = provider_access_routes(fixture_catalog().provider("openai"))[0]
+        # "acme" carries no shipped posture, so this keeps testing the default
+        # rather than whichever posture the overlays happen to declare.
+        route = provider_access_routes(fixture_catalog().provider("acme"))[0]
 
         self.assertEqual("unverified", route.terms_posture)
 

@@ -1,23 +1,336 @@
 {
+  "aliases": {
+    "codex/luna": "openai-codex/gpt-5.6-luna",
+    "openai/luna": "openai/gpt-5.6-luna"
+  },
   "providers": {
+    "anthropic": {
+      "api_url": "https://api.anthropic.com",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "ANTHROPIC_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Anthropic API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "x-api-key",
+              "credential_key": "api_key",
+              "credential_scheme": "",
+              "headers": {
+                "anthropic-version": "2023-06-01"
+              },
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v1/messages",
+                "/v1/messages/count_tokens",
+                "/v1/models"
+              ],
+              "probe_path": "/v1/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        },
+        {
+          "billing_kinds": [
+            "subscription"
+          ],
+          "kind": "delegated",
+          "label": "Claude Code sign-in",
+          "metadata": {
+            "instructions": "Anthropic requires its own tooling for subscription access, so this reuses an existing Claude Code sign-in rather than authenticating separately.",
+            "route_id": "subscription",
+            "terms_posture": "first_party_only"
+          }
+        }
+      ],
+      "extends": "anthropic"
+    },
+    "cerebras": {
+      "api_url": "https://api.cerebras.ai",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "CEREBRAS_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Cerebras API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v1/chat/completions",
+                "/v1/models"
+              ],
+              "probe_path": "/v1/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "cerebras"
+    },
+    "cohere": {
+      "api_url": "https://api.cohere.com",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "COHERE_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Cohere API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v2/chat",
+                "/v2/models"
+              ],
+              "probe_path": "/v2/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "cohere"
+    },
+    "deepinfra": {
+      "api_url": "https://api.deepinfra.com",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "DEEPINFRA_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Deep Infra API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v1/openai/chat/completions",
+                "/v1/openai/models"
+              ],
+              "probe_path": "/v1/openai/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "deepinfra"
+    },
+    "google": {
+      "api_url": "https://generativelanguage.googleapis.com",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "GOOGLE_API_KEY",
+            "GOOGLE_GENERATIVE_AI_API_KEY",
+            "GEMINI_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Google API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "x-goog-api-key",
+              "credential_key": "api_key",
+              "credential_scheme": "",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v1beta/models",
+                "/v1beta/models/*"
+              ],
+              "probe_path": "/v1beta/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "google"
+    },
+    "groq": {
+      "api_url": "https://api.groq.com",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "GROQ_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Groq API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/openai/v1/chat/completions",
+                "/openai/v1/models"
+              ],
+              "probe_path": "/openai/v1/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "groq"
+    },
+    "mistral": {
+      "api_url": "https://api.mistral.ai",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "MISTRAL_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Mistral API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v1/chat/completions",
+                "/v1/models"
+              ],
+              "probe_path": "/v1/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "mistral"
+    },
+    "openai": {
+      "api_url": "https://api.openai.com",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "OPENAI_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "OpenAI Platform API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v1/chat/completions",
+                "/v1/responses",
+                "/v1/models"
+              ],
+              "probe_path": "/v1/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "openai"
+    },
     "openai-codex": {
-      "name": "OpenAI Codex",
-      "models_from": "openai",
-      "include_models": [
-        "gpt-5.6-luna",
-        "gpt-5.6-sol",
-        "gpt-5.6-terra"
+      "access_routes": [
+        {
+          "billing_kind": "subscription",
+          "driver": "delegated_import",
+          "id": "delegated",
+          "instructions": "Reuses the sign-in the Codex CLI already holds; the SDK keeps token custody.",
+          "kind": "delegated",
+          "label": "Codex CLI sign-in",
+          "terms_posture": "first_party_only"
+        },
+        {
+          "billing_kind": "subscription",
+          "driver": "oauth_pkce",
+          "id": "subscription",
+          "instructions": "Requires an OAuth client you register yourself; set metadata.oauth.client_id and the redirect URI registered against it.",
+          "kind": "oauth",
+          "label": "ChatGPT subscription sign-in",
+          "metadata": {
+            "oauth": {
+              "authorization_endpoint": "https://auth.openai.com/oauth/authorize",
+              "device_authorization_endpoint": "https://auth.openai.com/api/accounts/deviceauth/usercode",
+              "redirect_uri": "http://localhost:1455/auth/callback",
+              "scopes": [
+                "openid",
+                "profile",
+                "email",
+                "offline_access"
+              ],
+              "token_endpoint": "https://auth.openai.com/oauth/token"
+            }
+          },
+          "terms_posture": "third_party_permitted"
+        }
       ],
       "adapter": "openai-codex-sdk",
       "api_url": null,
-      "env": [],
       "auth_methods": [
         {
-          "kind": "delegated",
           "billing_kinds": [
             "subscription",
             "api"
           ],
+          "kind": "delegated",
           "label": "Codex or ChatGPT login",
           "metadata": {
             "credential_owner": "codex-client",
@@ -25,18 +338,24 @@
           }
         }
       ],
+      "env": [],
+      "include_models": [
+        "gpt-5.6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra"
+      ],
       "metadata": {
         "availability": "requires-runtime-verification",
+        "tier_options": {
+          "fast": {
+            "service_tier": "fast"
+          },
+          "standard": {}
+        },
         "tiers": [
           "standard",
           "fast"
-        ],
-        "tier_options": {
-          "standard": {},
-          "fast": {
-            "service_tier": "fast"
-          }
-        }
+        ]
       },
       "model_patches": {
         "gpt-5.6-luna": {
@@ -63,12 +382,140 @@
             ]
           }
         }
-      }
+      },
+      "models_from": "openai",
+      "name": "OpenAI Codex"
+    },
+    "perplexity": {
+      "api_url": "https://api.perplexity.ai",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "PERPLEXITY_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Perplexity API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/chat/completions"
+              ]
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "perplexity"
+    },
+    "togetherai": {
+      "api_url": "https://api.together.xyz",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "TOGETHER_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Together AI API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v1/chat/completions",
+                "/v1/models"
+              ],
+              "probe_path": "/v1/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "togetherai"
+    },
+    "vercel": {
+      "api_url": "https://ai-gateway.vercel.sh",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "AI_GATEWAY_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "Vercel AI Gateway API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v1/chat/completions",
+                "/v1/models"
+              ],
+              "probe_path": "/v1/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "vercel"
+    },
+    "xai": {
+      "api_url": "https://api.x.ai",
+      "auth_methods": [
+        {
+          "billing_kinds": [
+            "api"
+          ],
+          "env": [
+            "XAI_API_KEY"
+          ],
+          "kind": "api_key",
+          "label": "xAI API key",
+          "metadata": {
+            "gateway": {
+              "credential_header": "Authorization",
+              "credential_key": "api_key",
+              "credential_scheme": "Bearer",
+              "methods": [
+                "POST",
+                "GET"
+              ],
+              "paths": [
+                "/v1/chat/completions",
+                "/v1/models"
+              ],
+              "probe_path": "/v1/models"
+            },
+            "terms_posture": "third_party_permitted"
+          }
+        }
+      ],
+      "extends": "xai"
     }
-  },
-  "aliases": {
-    "codex/luna": "openai-codex/gpt-5.6-luna",
-    "openai/luna": "openai/gpt-5.6-luna"
   },
   "roles": {}
 }

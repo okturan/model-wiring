@@ -184,6 +184,7 @@ def _derived_routes(provider: ProviderSpec) -> tuple[AccessRoute, ...]:
                 env=method.env,
                 doc_url=provider.doc_url,
                 driver=_default_driver(method.kind),
+                instructions=_optional_text(method.metadata.get("instructions")),
                 metadata=method.metadata,
             )
         )
@@ -208,6 +209,11 @@ def _default_driver(kind: str) -> str | None:
         "oauth": "oauth_pkce",
         "delegated": "delegated_import",
     }.get(kind)
+
+
+def _optional_text(value: Any) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    return text or None
 
 
 def _posture(value: Any) -> str:

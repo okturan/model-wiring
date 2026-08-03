@@ -34,6 +34,54 @@ class CatalogTests(unittest.TestCase):
             catalog.provider("openai").metadata.get("popularity_rank"), int
         )
 
+    def test_an_overlay_extending_an_absent_provider_is_skipped(self) -> None:
+        """A correction has nothing to correct when its subject is missing.
+
+        Publishing the entry anyway would invent a provider carrying no models
+        and an endpoint nobody confirmed the catalogue serves.
+        """
+
+        catalog = fixture_catalog(
+            overlays=[
+                {
+                    "providers": {
+                        "ghost": {
+                            "extends": "not-in-this-catalogue",
+                            "api_url": "https://ghost.example",
+                        }
+                    }
+                }
+            ]
+        )
+
+        self.assertNotIn("ghost", catalog.snapshot.providers)
+
+    def test_an_overlay_extending_the_provider_it_names_corrects_it_in_place(
+        self,
+    ) -> None:
+        """How shipped provider data enriches a catalogue without inventing one."""
+
+        before = len(fixture_catalog().snapshot.providers)
+
+        catalog = fixture_catalog(
+            overlays=[
+                {
+                    "providers": {
+                        "openai": {
+                            "extends": "openai",
+                            "api_url": "https://api.openai.example",
+                        }
+                    }
+                }
+            ]
+        )
+
+        self.assertEqual(before, len(catalog.snapshot.providers))
+        self.assertEqual(
+            "https://api.openai.example", catalog.provider("openai").api_url
+        )
+        self.assertIn("gpt-5.6-luna", catalog.provider("openai").models)
+
     def test_normalizes_models_dev_and_default_delegated_overlay(self) -> None:
         catalog = fixture_catalog()
 

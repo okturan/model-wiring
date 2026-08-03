@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from helpers import fixture_catalog
+from helpers import fixture_catalog, shipped_catalog
 from model_wiring import (
     AuthBroker,
     Catalog,
@@ -190,7 +190,8 @@ def gateway_overlay(
 class GatewayRouteDataTests(unittest.TestCase):
     def test_routes_are_read_from_access_route_metadata(self) -> None:
         catalog = fixture_catalog(
-            overlays=[gateway_overlay("http://127.0.0.1:9111/base")]
+            include_default_overlays=False,
+            overlays=[gateway_overlay("http://127.0.0.1:9111/base")],
         )
 
         routes = gateway_routes(catalog)
@@ -206,29 +207,35 @@ class GatewayRouteDataTests(unittest.TestCase):
         self.assertEqual("api", route.billing_kind)
 
     def test_a_provider_declaring_no_gateway_data_exposes_no_route(self) -> None:
-        catalog = fixture_catalog()
+        catalog = fixture_catalog(
+            include_default_overlays=False,
+        )
 
         self.assertEqual((), gateway_routes(catalog))
 
     def test_base_url_falls_back_to_the_catalogued_api_url(self) -> None:
         catalog = fixture_catalog(
-            overlays=[gateway_overlay(None, api_url="http://127.0.0.1:9112")]
+            include_default_overlays=False,
+            overlays=[gateway_overlay(None, api_url="http://127.0.0.1:9112")],
         )
 
         self.assertEqual("http://127.0.0.1:9112", gateway_routes(catalog)[0].base_url)
 
     def test_a_route_with_no_base_url_anywhere_is_not_exposed(self) -> None:
-        catalog = fixture_catalog(overlays=[gateway_overlay(None)])
+        catalog = fixture_catalog(
+            include_default_overlays=False, overlays=[gateway_overlay(None)]
+        )
 
         self.assertEqual((), gateway_routes(catalog))
 
     def test_declared_paths_match_exactly_and_by_prefix(self) -> None:
         catalog = fixture_catalog(
+            include_default_overlays=False,
             overlays=[
                 gateway_overlay(
                     "http://127.0.0.1:9113", paths=["/v1/models", "/v1/responses/*"]
                 )
-            ]
+            ],
         )
         route = gateway_routes(catalog)[0]
 
@@ -242,8 +249,47 @@ class GatewayRouteDataTests(unittest.TestCase):
         self.assertIsNone(route.match("POST", "/acmex/v1/models"))
         self.assertIsNone(route.match("POST", "/v1/models"))
 
+    def test_every_shipped_route_is_usable(self) -> None:
+        """The rest of this file is hermetic, so shipped data needs its own check.
+
+        Asserting invariants rather than a provider list keeps this from
+        failing every time verified provider data is added.
+        """
+
+        routes = gateway_routes(shipped_catalog())
+
+        self.assertGreaterEqual(len(routes), 10, "shipped provider data went missing")
+        for route in routes:
+            with self.subTest(provider=route.provider_id):
+                self.assertEqual(f"/{route.provider_id}", route.mount)
+                self.assertTrue(
+                    route.base_url.startswith("https://"),
+                    f"{route.base_url} is not a TLS endpoint",
+                )
+                self.assertTrue(route.paths, "a route reaching nothing")
+                self.assertTrue(route.credential_header)
+                if route.probe_path:
+                    self.assertIn(route.probe_path, route.paths)
+
+    def test_a_shipped_route_carries_the_header_scheme_its_provider_wants(self) -> None:
+        """A bare key sent as a bearer, or the reverse, is a 401 every time."""
+
+        routes = {
+            route.provider_id: route for route in gateway_routes(shipped_catalog())
+        }
+
+        self.assertEqual("x-api-key", routes["anthropic"].credential_header)
+        self.assertEqual("", routes["anthropic"].credential_scheme)
+        self.assertEqual("x-goog-api-key", routes["google"].credential_header)
+        self.assertEqual("", routes["google"].credential_scheme)
+        self.assertEqual("Authorization", routes["openai"].credential_header)
+        self.assertEqual("Bearer", routes["openai"].credential_scheme)
+
     def test_provider_routes_survive_a_serialization_round_trip(self) -> None:
-        catalog = fixture_catalog(overlays=[gateway_overlay("http://127.0.0.1:9114")])
+        catalog = fixture_catalog(
+            include_default_overlays=False,
+            overlays=[gateway_overlay("http://127.0.0.1:9114")],
+        )
         provider = catalog.provider("acme")
 
         route = provider_gateway_routes(provider)[0]
@@ -314,7 +360,10 @@ class GatewayTestCase(unittest.TestCase):
         self.addCleanup(self.stop_server)
 
     def build_catalog(self) -> Catalog:
-        return fixture_catalog(overlays=[gateway_overlay(self.provider.base_url)])
+        return fixture_catalog(
+            include_default_overlays=False,
+            overlays=[gateway_overlay(self.provider.base_url)],
+        )
 
     def stop_server(self) -> None:
         self.server.shutdown()
@@ -513,6 +562,7 @@ class DeclaredCredentialShapeTests(GatewayTestCase):
 
     def build_catalog(self) -> Catalog:
         return fixture_catalog(
+            include_default_overlays=False,
             overlays=[
                 gateway_overlay(
                     self.provider.base_url,
@@ -520,7 +570,7 @@ class DeclaredCredentialShapeTests(GatewayTestCase):
                     credential_scheme="",
                     gateway={"headers": {"acme-version": "2026-01-01"}},
                 )
-            ]
+            ],
         )
 
     def test_the_credential_header_and_scheme_come_from_route_data(self) -> None:

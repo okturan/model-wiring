@@ -65,6 +65,14 @@ requires its bearer token on every request, checked before any credential is
 read. `model-wiring serve` now does the same — **a breaking change** for
 callers that previously reached it unauthenticated.
 
+Routes are catalog data, not code. Twelve providers ship with the endpoints,
+paths, and credential header each one expects — Anthropic and Google want a
+bare key in their own header, most others want a bearer — so `model-wiring
+gateway` exposes them without configuration. Adding another is a JSON entry in
+an overlay, no release required. Providers whose endpoint depends on a region
+or deployment, such as Bedrock, Azure, and Vertex, ship no route: there is no
+single URL that would be correct.
+
 ## Connecting a provider
 
 ```sh

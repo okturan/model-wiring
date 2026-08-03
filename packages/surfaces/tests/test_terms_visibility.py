@@ -67,9 +67,7 @@ class ProviderPostureTests(unittest.TestCase):
     def test_a_provider_that_declares_nothing_reports_unverified(self) -> None:
         controller = SelectionController(fixture_catalog())
 
-        self.assertEqual(
-            "unverified", provider_view(controller, "openai").terms_posture
-        )
+        self.assertEqual("unverified", provider_view(controller, "acme").terms_posture)
 
     def test_a_provider_needing_no_credential_reports_no_posture(self) -> None:
         controller = SelectionController(fixture_catalog())

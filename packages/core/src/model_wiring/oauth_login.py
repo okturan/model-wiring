@@ -34,6 +34,9 @@ from .oauth import (
 
 SLOW_DOWN_BACKOFF_SECONDS = 5.0
 
+# A pinned redirect must still come back to this machine.
+LOOPBACK_REDIRECT_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
 CLOSE_PAGE = (
     b"<!doctype html><meta charset=utf-8><title>Sign-in complete</title>"
     b"<p>You can close this tab and return to your terminal.</p>"
@@ -47,8 +50,14 @@ class LoopbackRedirect:
     and never logs the query string, which carries the authorization code.
     """
 
-    def __init__(self, *, path: str = "/callback") -> None:
+    def __init__(
+        self, *, path: str = "/callback", port: int = 0, host: str = "127.0.0.1"
+    ) -> None:
+        # A provider registers one exact redirect URI against a client id, so a
+        # route that names a port and path gets exactly those. Binding an
+        # ephemeral port instead would be rejected at token exchange.
         self.path = path
+        self.host = host
         self._result: dict[str, str] | None = None
         self._received = threading.Event()
         outer = self
@@ -71,7 +80,7 @@ class LoopbackRedirect:
             def log_message(self, *args: object) -> None:
                 """Silence the default logger; the query carries a secret."""
 
-        self._server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self._server = ThreadingHTTPServer((host, port), Handler)
         # shutdown() blocks for one poll interval; the stdlib default of 0.5s
         # is a visible pause between approving in the browser and continuing.
         self._thread = threading.Thread(
@@ -86,7 +95,7 @@ class LoopbackRedirect:
 
     @property
     def redirect_uri(self) -> str:
-        return f"http://127.0.0.1:{self.port}{self.path}"
+        return f"http://{self.host}:{self.port}{self.path}"
 
     def _capture(self, values: Mapping[str, str]) -> None:
         if self._result is None:
@@ -178,7 +187,7 @@ class OAuthPkceDriver(_OAuthDriverBase):
     def begin(
         self, provider: ProviderSpec, route: AccessRoute, context: LoginContext
     ) -> LoginSession:
-        redirect = LoopbackRedirect()
+        redirect = LoopbackRedirect(**_required_redirect(route))
         try:
             config = route_oauth_config(route, redirect_uri=redirect.redirect_uri)
             request = self._client(config).begin_authorization(
@@ -302,3 +311,26 @@ class OAuthDeviceDriver(_OAuthDriverBase):
 def _optional(value: Any) -> str | None:
     text = str(value).strip() if value is not None else ""
     return text or None
+
+
+def _required_redirect(route: AccessRoute) -> dict[str, Any]:
+    """Bind the exact redirect URI a route pins, or an ephemeral port.
+
+    Providers register one redirect URI against a client id and reject any
+    other, so a declared value is a requirement rather than a preference.
+    """
+
+    raw = route.metadata.get("oauth")
+    declared = raw.get("redirect_uri") if isinstance(raw, Mapping) else None
+    if not declared:
+        return {}
+    parsed = urlparse(str(declared))
+    if parsed.scheme != "http" or parsed.hostname not in LOOPBACK_REDIRECT_HOSTS:
+        raise ValueError(
+            f"access route {route.id!r} pins a non-loopback redirect: {declared}"
+        )
+    return {
+        "host": parsed.hostname,
+        "port": parsed.port or 0,
+        "path": parsed.path or "/callback",
+    }

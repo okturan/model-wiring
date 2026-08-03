@@ -49,7 +49,8 @@ class GatewayProbeTestCase(unittest.TestCase):
 
     def build_catalog(self) -> Catalog:
         return fixture_catalog(
-            overlays=[gateway_overlay(self.provider.base_url, gateway=self.declared())]
+            include_default_overlays=False,
+            overlays=[gateway_overlay(self.provider.base_url, gateway=self.declared())],
         )
 
     def seed_profile(

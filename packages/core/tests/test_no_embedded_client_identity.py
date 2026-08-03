@@ -12,7 +12,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from model_wiring.access import AccessRoute
+from helpers import shipped_catalog, shipped_overlay
+from model_wiring.access import AccessRoute, provider_access_routes
 from model_wiring.oauth_login import route_oauth_config
 
 # Everything setuptools packages lives under a workspace member's src tree.
@@ -164,6 +165,58 @@ class SuppliedClientIdentityTests(unittest.TestCase):
             route_oauth_config(route)
 
         self.assertIn("client_id", str(caught.exception))
+
+
+class ShippedOverlayTests(unittest.TestCase):
+    """The routes the shipped overlay produces carry endpoints, never identity."""
+
+    def routes(self) -> list[tuple[str, AccessRoute]]:
+        catalog = shipped_catalog()
+        return [
+            (provider_id, route)
+            for provider_id in sorted(shipped_overlay()["providers"])
+            for route in provider_access_routes(catalog.provider(provider_id))
+        ]
+
+    def test_the_overlay_really_produces_routes(self) -> None:
+        """Guards every other test here from passing over an empty list."""
+
+        self.assertGreater(len(self.routes()), 3)
+
+    def test_no_shipped_route_carries_a_client_id(self) -> None:
+        for provider_id, route in self.routes():
+            oauth = route.metadata.get("oauth") or {}
+            self.assertNotIn(
+                "client_id", oauth, f"{provider_id}/{route.id} ships a client id"
+            )
+
+    def test_an_oauth_route_ships_the_endpoints_it_can(self) -> None:
+        """Endpoints are public and stable; only the identity is ours to omit."""
+
+        oauth_routes = [
+            (provider_id, route)
+            for provider_id, route in self.routes()
+            if route.metadata.get("oauth")
+        ]
+
+        self.assertTrue(oauth_routes, "no OAuth route shipped, so this proves nothing")
+        for provider_id, route in oauth_routes:
+            with self.subTest(route=f"{provider_id}/{route.id}"):
+                oauth = route.metadata["oauth"]
+                self.assertIn("authorization_endpoint", oauth)
+                self.assertIn("token_endpoint", oauth)
+
+    def test_an_oauth_route_fails_naming_what_the_application_must_supply(
+        self,
+    ) -> None:
+        for provider_id, route in self.routes():
+            if not route.metadata.get("oauth"):
+                continue
+            with self.subTest(route=f"{provider_id}/{route.id}"):
+                with self.assertRaises(ValueError) as caught:
+                    route_oauth_config(route)
+
+                self.assertIn("client_id", str(caught.exception))
 
 
 if __name__ == "__main__":

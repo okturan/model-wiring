@@ -15,6 +15,10 @@ jobs:
       - run: python -m pip install -e packages/core -e packages/surfaces
       - run: python -m unittest discover -s packages/core/tests -v
       - run: python -m unittest discover -s packages/surfaces/tests -v
+      # Provider data is where a live call sneaks into the suite: adding a base
+      # URL turns an undeclared route into one aimed at a real API.
+      - run: python packages/core/tests/loopback_only.py packages/core/tests
+      - run: python packages/core/tests/loopback_only.py packages/surfaces/tests
       - run: python -m compileall -q packages/core/src packages/core/tests packages/surfaces/src packages/surfaces/tests
       - run: node --check packages/surfaces/src/model_wiring_surfaces/web/model-wiring-picker.js
 

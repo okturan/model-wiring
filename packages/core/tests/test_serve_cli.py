@@ -91,7 +91,14 @@ class GatewayCommandTests(LoopbackServiceTestCase):
 
     def test_the_gateway_prints_its_base_url_token_and_declared_routes(self) -> None:
         code, payload, served = self.start(
-            *self.common, *self.overlay, "gateway", "--port", "0", "--json"
+            *self.common,
+            *self.overlay,
+            "gateway",
+            "--port",
+            "0",
+            "--provider",
+            "acme",
+            "--json",
         )
 
         self.assertEqual(0, code)
@@ -122,8 +129,10 @@ class GatewayCommandTests(LoopbackServiceTestCase):
         self.assertRegex(printed, r"route acme api: http://127\.0\.0\.1:\d+/acme")
 
     def test_a_catalogue_declaring_no_route_still_starts_and_says_so(self) -> None:
+        # "local" is catalogued but ships no gateway data, so this stays a
+        # zero-route start however much provider data the overlays grow.
         code, payload, served = self.start(
-            *self.common, "gateway", "--port", "0", "--json"
+            *self.common, "gateway", "--port", "0", "--provider", "local", "--json"
         )
 
         self.assertEqual(0, code)
@@ -138,7 +147,7 @@ class GatewayCommandTests(LoopbackServiceTestCase):
             "--port",
             "0",
             "--provider",
-            "openai",
+            "local",
             "--json",
         )
 

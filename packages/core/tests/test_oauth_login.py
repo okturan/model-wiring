@@ -295,3 +295,79 @@ class LoopbackRedirectTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FixedRedirectTests(unittest.TestCase):
+    """Providers register one exact redirect URI against a client id.
+
+    OpenAI's Codex client only accepts ``http://localhost:1455/auth/callback``;
+    an ephemeral port is rejected at token exchange, so the listener has to be
+    able to take the port and path a provider requires.
+    """
+
+    def test_a_required_port_and_path_are_honoured(self) -> None:
+        with LoopbackRedirect(port=1455, path="/auth/callback") as redirect:
+            self.assertEqual(1455, redirect.port)
+            self.assertEqual(
+                "http://127.0.0.1:1455/auth/callback", redirect.redirect_uri
+            )
+
+    def test_a_required_host_can_be_localhost(self) -> None:
+        with LoopbackRedirect(port=1455, path="/auth/callback", host="localhost") as r:
+            self.assertEqual("http://localhost:1455/auth/callback", r.redirect_uri)
+
+    def test_an_unavailable_required_port_fails_loudly(self) -> None:
+        with (
+            LoopbackRedirect(port=1455, path="/auth/callback"),
+            self.assertRaises(OSError),
+        ):
+            LoopbackRedirect(port=1455, path="/auth/callback")
+
+    def test_the_default_is_still_an_ephemeral_port(self) -> None:
+        with LoopbackRedirect() as redirect:
+            self.assertNotEqual(0, redirect.port)
+            self.assertTrue(redirect.redirect_uri.startswith("http://127.0.0.1:"))
+
+
+PINNED_REDIRECT_PROVIDER = {
+    "pinned": {
+        "name": "Pinned Redirect",
+        "models": {"p-1": {"name": "P1"}},
+        "access_routes": [
+            {
+                "id": "subscription",
+                "kind": "oauth",
+                "billing_kind": "subscription",
+                "label": "Pinned subscription",
+                "driver": "oauth_pkce",
+                "terms_posture": "third_party_permitted",
+                "metadata": {
+                    "oauth": {
+                        "client_id": "app-supplied",
+                        "authorization_endpoint": "https://pinned.example/authorize",
+                        "token_endpoint": "https://pinned.example/token",
+                        "redirect_uri": "http://localhost:1456/auth/callback",
+                    }
+                },
+            }
+        ],
+    }
+}
+
+
+class PinnedRedirectDriverTests(unittest.TestCase):
+    def test_the_driver_binds_the_redirect_uri_the_route_requires(self) -> None:
+        login, _, _ = broker_for(PINNED_REDIRECT_PROVIDER, token_transport())
+
+        session = login.begin("pinned", route_id="subscription")
+        try:
+            self.assertEqual(
+                "http://localhost:1456/auth/callback", session.prompt.redirect_uri
+            )
+            self.assertEqual(1456, session.private["redirect"].port)
+            query = parse_qs(urlparse(session.prompt.url).query)
+            self.assertEqual(
+                ["http://localhost:1456/auth/callback"], query["redirect_uri"]
+            )
+        finally:
+            session.private["redirect"].close()
